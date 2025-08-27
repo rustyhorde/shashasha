@@ -17,4 +17,7 @@ pub enum Sha3Error {
     /// Thrown if the truncate function fails for the given round constant
     #[error("Truncate failed")]
     TruncateFailed(u64),
+    /// Thrown if the number of bits does not match the output length given to the squeezed function
+    #[error("Output length does not match number of bits")]
+    OutputLengthMismatch(usize, usize),
 }

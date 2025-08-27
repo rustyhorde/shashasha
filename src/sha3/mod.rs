@@ -9,7 +9,7 @@
 use anyhow::Result;
 use bitvec::{bits, order::Lsb0, slice::BitSlice, vec::BitVec};
 
-use crate::{constants::ARR_SIZE, f_1600};
+use crate::{Sponge, sponge::Keccak1600Sponge};
 
 pub(crate) mod sha224;
 pub(crate) mod sha256;
@@ -32,109 +32,27 @@ pub trait Hasher<const D_BYTES: usize> {
 /// SHA-3 hash function
 #[derive(Clone, Debug)]
 struct Sha3<const B: usize> {
-    state: [u64; ARR_SIZE],
-    message: BitVec<u8, Lsb0>,
+    sponge: Keccak1600Sponge,
 }
 
 impl<const B: usize> Sha3<B> {
     pub(crate) fn update(&mut self, data: &[u8]) {
         // Update the internal state with the new data
-        self.message.extend_from_raw_slice(data);
+        self.sponge.absorb(data);
     }
 
     pub(crate) fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
         // Update the internal state with the new bits
-        self.message.extend_from_bitslice(data);
+        self.sponge.absorb_bits(data);
     }
 
-    pub(crate) fn finalize(
-        &mut self,
-        output: &mut [u8; B],
-        rate: usize,
-        capacity: usize,
-    ) -> Result<()> {
+    pub(crate) fn finalize(&mut self, output: &mut [u8; B]) -> Result<()> {
         // Finalize the hash computation and return the result
-        self.message.extend_from_bitslice(bits![u8, Lsb0; 0, 1]);
-
-        let mut chunks = self.message.chunks_exact(rate);
-        let mut bvs = Vec::new();
-        for bits in &mut chunks {
-            let mut bv = bits.to_bitvec();
-            pad10star1(&mut bv, rate)?;
-            zero_pad(&mut bv, capacity);
-            bvs.push(bv);
-        }
-
-        let rem = chunks.remainder();
-
-        if !rem.is_empty() {
-            let mut bv = rem.to_bitvec();
-            pad10star1(&mut bv, rate)?;
-            zero_pad(&mut bv, capacity);
-            bvs.push(bv);
-        }
-
-        for bv in bvs {
-            self.xor_block(&bv)?;
-            self.keccak()?;
-        }
-
-        output
-            .iter_mut()
-            .zip(self.state_to_bytes().iter())
-            .for_each(|(o, b)| *o = *b);
+        self.sponge.absorb_bits(bits![u8, Lsb0; 0, 1]);
+        let num_bits = output.len() * 8;
+        self.sponge.squeezed(output, num_bits)?;
         Ok(())
     }
-
-    pub(crate) fn xor_block(&mut self, bits: &BitVec<u8, Lsb0>) -> Result<()> {
-        let mut chunks = bits.chunks_exact(64);
-
-        for (s, chunk) in self.state.iter_mut().zip(&mut chunks) {
-            let mut value: u64 = 0;
-            for (j, bit) in chunk.iter().enumerate() {
-                value += u64::from(*bit) * 2u64.pow(j.try_into()?);
-            }
-            *s ^= value;
-        }
-        Ok(())
-    }
-
-    pub(crate) fn state_to_bytes(&self) -> Vec<u8> {
-        let mut output = Vec::new();
-        for s in &self.state {
-            output.extend(s.to_le_bytes());
-        }
-
-        output.truncate(B);
-        output
-    }
-
-    pub(crate) fn keccak(&mut self) -> Result<()> {
-        f_1600(&mut self.state)?;
-        Ok(())
-    }
-}
-
-fn pad10star1(bits: &mut BitVec<u8, Lsb0>, rate_bits: usize) -> Result<()> {
-    let len = bits.len();
-    if len < rate_bits {
-        let len = isize::try_from(len)?;
-        let j = (-len - 2).rem_euclid(isize::try_from(rate_bits)?);
-
-        bits.push(true);
-
-        for _ in 0..j {
-            bits.push(false);
-        }
-
-        bits.push(true);
-    }
-    Ok(())
-}
-
-fn zero_pad(bits: &mut BitVec<u8, Lsb0>, capacity_bits: usize) {
-    let zero_buffer = vec![0u8; capacity_bits / 8];
-    bits.extend_from_raw_slice(&zero_buffer);
 }
 
 #[allow(dead_code)]

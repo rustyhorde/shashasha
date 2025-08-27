@@ -246,6 +246,7 @@ mod error;
 mod keccak;
 mod lane;
 mod sha3;
+mod sponge;
 
 pub use self::error::Sha3Error;
 pub use self::keccak::f_200;
@@ -262,3 +263,4 @@ pub use self::sha3::sha224::Sha3_224;
 pub use self::sha3::sha256::Sha3_256;
 pub use self::sha3::sha384::Sha3_384;
 pub use self::sha3::sha512::Sha3_512;
+pub use self::sponge::Sponge;

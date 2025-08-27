@@ -7,12 +7,13 @@
 // modified, or distributed except according to those terms.
 
 use anyhow::Result;
-use bitvec::{order::Lsb0, slice::BitSlice, vec::BitVec};
+use bitvec::{order::Lsb0, slice::BitSlice};
 
 use crate::{
     Hasher,
-    constants::{ARR_SIZE, SHA3_224_BYTES, SHA3_224_CAPACITY, SHA3_224_RATE},
+    constants::{SHA3_224_BYTES, SHA3_224_CAPACITY, SHA3_224_RATE},
     sha3::Sha3,
+    sponge::Keccak1600Sponge,
 };
 
 /// SHA3-224 hash function
@@ -33,8 +34,7 @@ impl Sha3_224 {
     pub fn new() -> Self {
         Self {
             inner: Sha3::<{ SHA3_224_BYTES }> {
-                state: [0u64; ARR_SIZE],
-                message: BitVec::new(),
+                sponge: Keccak1600Sponge::new(SHA3_224_RATE, SHA3_224_CAPACITY),
             },
         }
     }
@@ -50,8 +50,7 @@ impl Hasher<{ SHA3_224_BYTES }> for Sha3_224 {
     }
 
     fn finalize(&mut self, output: &mut [u8; SHA3_224_BYTES]) -> Result<()> {
-        self.inner
-            .finalize(output, SHA3_224_RATE, SHA3_224_CAPACITY)
+        self.inner.finalize(output)
     }
 }
 
