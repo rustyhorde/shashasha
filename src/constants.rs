@@ -6,22 +6,25 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use std::sync::LazyLock;
+pub(crate) const SHA3_WIDTH: usize = 1600;
 
 // SHA-224 constants
-pub(crate) const SHA3_WIDTH: usize = 1600;
 pub(crate) const SHA3_224_BITS: usize = 224;
 pub(crate) const SHA3_224_BYTES: usize = SHA3_224_BITS / 8;
-pub(crate) static SHA3_224_CAPACITY: LazyLock<usize> = LazyLock::new(|| 2 * SHA3_224_BITS);
-pub(crate) static SHA3_224_RATE: LazyLock<usize> =
-    LazyLock::new(|| SHA3_WIDTH - *SHA3_224_CAPACITY);
+pub(crate) const SHA3_224_CAPACITY: usize = 2 * SHA3_224_BITS;
+pub(crate) const SHA3_224_RATE: usize = SHA3_WIDTH - SHA3_224_CAPACITY;
 
 /// SHA-256 constants
 pub(crate) const SHA3_256_BITS: usize = 256;
 pub(crate) const SHA3_256_BYTES: usize = SHA3_256_BITS / 8;
-pub(crate) static SHA3_256_CAPACITY: LazyLock<usize> = LazyLock::new(|| 2 * SHA3_256_BITS);
-pub(crate) static SHA3_256_RATE: LazyLock<usize> =
-    LazyLock::new(|| SHA3_WIDTH - *SHA3_256_CAPACITY);
+pub(crate) const SHA3_256_CAPACITY: usize = 2 * SHA3_256_BITS;
+pub(crate) const SHA3_256_RATE: usize = SHA3_WIDTH - SHA3_256_CAPACITY;
+
+/// SHA-384 constants
+pub(crate) const SHA3_384_BITS: usize = 384;
+pub(crate) const SHA3_384_BYTES: usize = SHA3_384_BITS / 8;
+pub(crate) const SHA3_384_CAPACITY: usize = 2 * SHA3_384_BITS;
+pub(crate) const SHA3_384_RATE: usize = SHA3_WIDTH - SHA3_384_CAPACITY;
 
 pub(crate) const ARR_SIZE: usize = 25;
 pub(crate) const RHO: [u32; 24] = [

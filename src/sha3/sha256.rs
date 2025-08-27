@@ -7,7 +7,7 @@
 // modified, or distributed except according to those terms.
 
 use anyhow::Result;
-use bitvec::{bits, order::Lsb0, slice::BitSlice, vec::BitVec};
+use bitvec::{order::Lsb0, slice::BitSlice, vec::BitVec};
 
 use crate::{
     Hasher,
@@ -19,7 +19,6 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct Sha3_256 {
     inner: Sha3<{ SHA3_256_BYTES }>,
-    message: BitVec<u8, Lsb0>,
 }
 
 impl Default for Sha3_256 {
@@ -33,60 +32,26 @@ impl Sha3_256 {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            message: BitVec::new(),
             inner: Sha3::<{ SHA3_256_BYTES }> {
                 state: [0u64; ARR_SIZE],
+                message: BitVec::new(),
             },
         }
-    }
-
-    pub(crate) fn state_to_bytes(&self) -> Vec<u8> {
-        let mut output = self.inner.state_to_bytes(SHA3_256_BYTES);
-        output.truncate(SHA3_256_BYTES);
-        output
     }
 }
 
 impl Hasher<{ SHA3_256_BYTES }> for Sha3_256 {
     fn update(&mut self, data: &[u8]) {
-        // Update the internal state with the new data
-        self.message.extend_from_raw_slice(data);
+        self.inner.update(data);
     }
 
     fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
-        // Update the internal state with the new bits
-        self.message.extend_from_bitslice(data);
+        self.inner.update_bits(data);
     }
 
     fn finalize(&mut self, output: &mut [u8; SHA3_256_BYTES]) -> Result<()> {
-        // Finalize the hash computation and return the result
-        let rate = *SHA3_256_RATE;
-        self.message.extend_from_bitslice(bits![u8, Lsb0; 0, 1]);
-
-        let mut chunks = self.message.chunks_exact(rate);
-        for bits in &mut chunks {
-            let mut bv = bits.to_bitvec();
-            self.inner.pad10star1(&mut bv, *SHA3_256_RATE)?;
-            self.inner.zero_pad(&mut bv, *SHA3_256_CAPACITY);
-            self.inner.xor_block(&bv)?;
-            self.inner.keccak()?;
-        }
-
-        let rem = chunks.remainder();
-
-        if !rem.is_empty() {
-            let mut bv = rem.to_bitvec();
-            self.inner.pad10star1(&mut bv, *SHA3_256_RATE)?;
-            self.inner.zero_pad(&mut bv, *SHA3_256_CAPACITY);
-            self.inner.xor_block(&bv)?;
-            self.inner.keccak()?;
-        }
-
-        output
-            .iter_mut()
-            .zip(self.state_to_bytes().iter())
-            .for_each(|(o, b)| *o = *b);
-        Ok(())
+        self.inner
+            .finalize(output, SHA3_256_RATE, SHA3_256_CAPACITY)
     }
 }
 

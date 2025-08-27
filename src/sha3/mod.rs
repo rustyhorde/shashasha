@@ -7,12 +7,13 @@
 // modified, or distributed except according to those terms.
 
 use anyhow::Result;
-use bitvec::{order::Lsb0, slice::BitSlice, vec::BitVec};
+use bitvec::{bits, order::Lsb0, slice::BitSlice, vec::BitVec};
 
 use crate::{constants::ARR_SIZE, f_1600};
 
 pub(crate) mod sha224;
 pub(crate) mod sha256;
+pub(crate) mod sha384;
 
 /// Trait for hashing data.
 pub trait Hasher<const D_BYTES: usize> {
@@ -31,31 +32,57 @@ pub trait Hasher<const D_BYTES: usize> {
 #[derive(Clone, Debug)]
 struct Sha3<const B: usize> {
     state: [u64; ARR_SIZE],
+    message: BitVec<u8, Lsb0>,
 }
 
 impl<const B: usize> Sha3<B> {
-    #[allow(clippy::unused_self)]
-    pub(crate) fn pad10star1(&self, bits: &mut BitVec<u8, Lsb0>, rate_bits: usize) -> Result<()> {
-        let len = bits.len();
-        if len < rate_bits {
-            let len = isize::try_from(len)?;
-            let j = (-len - 2).rem_euclid(isize::try_from(rate_bits)?);
-
-            bits.push(true);
-
-            for _ in 0..j {
-                bits.push(false);
-            }
-
-            bits.push(true);
-        }
-        Ok(())
+    pub(crate) fn update(&mut self, data: &[u8]) {
+        // Update the internal state with the new data
+        self.message.extend_from_raw_slice(data);
     }
 
-    #[allow(clippy::unused_self)]
-    pub(crate) fn zero_pad(&self, bits: &mut BitVec<u8, Lsb0>, capacity_bits: usize) {
-        let zero_buffer = vec![0u8; capacity_bits / 8];
-        bits.extend_from_raw_slice(&zero_buffer);
+    pub(crate) fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
+        // Update the internal state with the new bits
+        self.message.extend_from_bitslice(data);
+    }
+
+    pub(crate) fn finalize(
+        &mut self,
+        output: &mut [u8; B],
+        rate: usize,
+        capacity: usize,
+    ) -> Result<()> {
+        // Finalize the hash computation and return the result
+        self.message.extend_from_bitslice(bits![u8, Lsb0; 0, 1]);
+
+        let mut chunks = self.message.chunks_exact(rate);
+        let mut bvs = Vec::new();
+        for bits in &mut chunks {
+            let mut bv = bits.to_bitvec();
+            pad10star1(&mut bv, rate)?;
+            zero_pad(&mut bv, capacity);
+            bvs.push(bv);
+        }
+
+        let rem = chunks.remainder();
+
+        if !rem.is_empty() {
+            let mut bv = rem.to_bitvec();
+            pad10star1(&mut bv, rate)?;
+            zero_pad(&mut bv, capacity);
+            bvs.push(bv);
+        }
+
+        for bv in bvs {
+            self.xor_block(&bv)?;
+            self.keccak()?;
+        }
+
+        output
+            .iter_mut()
+            .zip(self.state_to_bytes().iter())
+            .for_each(|(o, b)| *o = *b);
+        Ok(())
     }
 
     pub(crate) fn xor_block(&mut self, bits: &BitVec<u8, Lsb0>) -> Result<()> {
@@ -71,13 +98,13 @@ impl<const B: usize> Sha3<B> {
         Ok(())
     }
 
-    pub(crate) fn state_to_bytes(&self, truncate: usize) -> Vec<u8> {
+    pub(crate) fn state_to_bytes(&self) -> Vec<u8> {
         let mut output = Vec::new();
         for s in &self.state {
             output.extend(s.to_le_bytes());
         }
 
-        output.truncate(truncate);
+        output.truncate(B);
         output
     }
 
@@ -85,6 +112,28 @@ impl<const B: usize> Sha3<B> {
         f_1600(&mut self.state)?;
         Ok(())
     }
+}
+
+fn pad10star1(bits: &mut BitVec<u8, Lsb0>, rate_bits: usize) -> Result<()> {
+    let len = bits.len();
+    if len < rate_bits {
+        let len = isize::try_from(len)?;
+        let j = (-len - 2).rem_euclid(isize::try_from(rate_bits)?);
+
+        bits.push(true);
+
+        for _ in 0..j {
+            bits.push(false);
+        }
+
+        bits.push(true);
+    }
+    Ok(())
+}
+
+fn zero_pad(bits: &mut BitVec<u8, Lsb0>, capacity_bits: usize) {
+    let zero_buffer = vec![0u8; capacity_bits / 8];
+    bits.extend_from_raw_slice(&zero_buffer);
 }
 
 #[allow(dead_code)]
