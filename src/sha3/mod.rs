@@ -14,6 +14,7 @@ use crate::{constants::ARR_SIZE, f_1600};
 pub(crate) mod sha224;
 pub(crate) mod sha256;
 pub(crate) mod sha384;
+pub(crate) mod sha512;
 
 /// Trait for hashing data.
 pub trait Hasher<const D_BYTES: usize> {
