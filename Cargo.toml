@@ -1,0 +1,15 @@
+[package]
+name = "shashasha"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+unstable = []
+
+[dependencies]
+anyhow = "1.0.99"
+bitvec = "1.0.1"
+thiserror = "2.0.16"
+
+[build-dependencies]
+rustversion = "1.0.22"
