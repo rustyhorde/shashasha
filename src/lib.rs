@@ -259,3 +259,4 @@ pub use self::keccak::p_1600;
 pub use self::lane::Lane;
 pub use self::sha3::Hasher;
 pub use self::sha3::sha224::Sha3_224;
+pub use self::sha3::sha256::Sha3_256;

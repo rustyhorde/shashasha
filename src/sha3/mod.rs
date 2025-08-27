@@ -12,6 +12,7 @@ use bitvec::{order::Lsb0, slice::BitSlice, vec::BitVec};
 use crate::{constants::ARR_SIZE, f_1600};
 
 pub(crate) mod sha224;
+pub(crate) mod sha256;
 
 /// Trait for hashing data.
 pub trait Hasher<const D_BYTES: usize> {
