@@ -265,6 +265,7 @@ pub use self::sha3::sha256::Sha3_256;
 pub use self::sha3::sha384::Sha3_384;
 pub use self::sha3::sha512::Sha3_512;
 pub use self::shake::shake128::Shake128;
+pub use self::shake::shake256::Shake256;
 pub use self::traits::Hasher;
 pub use self::traits::Sponge;
 pub use self::traits::XofHasher;

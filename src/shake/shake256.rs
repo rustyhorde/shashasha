@@ -1,0 +1,323 @@
+// Copyright (c) 2025 shashasha developers
+//
+// Licensed under the Apache License, Version 2.0
+// <LICENSE-APACHE or https://www.apache.org/licenses/LICENSE-2.0> or the MIT
+// license <LICENSE-MIT or https://opensource.org/licenses/MIT>, at your
+// option. All files in the project carrying such notice may not be copied,
+// modified, or distributed except according to those terms.
+
+use bitvec::{order::Lsb0, slice::BitSlice};
+
+use crate::{
+    XofHasher,
+    constants::{SHAKE_256_CAPACITY, SHAKE_256_RATE},
+    shake::Shake,
+    sponge::Keccak1600Sponge,
+};
+
+/// SHAKE256 XOR function
+#[derive(Clone, Debug)]
+pub struct Shake256 {
+    inner: Shake,
+    num_bits: usize,
+}
+
+impl Shake256 {
+    /// Create a new SHAKE256 XOR hasher instance.
+    #[must_use]
+    pub fn new(num_bits: usize) -> Self {
+        Self {
+            num_bits,
+            inner: Shake {
+                sponge: Keccak1600Sponge::new(SHAKE_256_RATE, SHAKE_256_CAPACITY),
+            },
+        }
+    }
+}
+
+impl XofHasher for Shake256 {
+    fn update(&mut self, data: &[u8]) {
+        self.inner.update(data);
+    }
+
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
+        self.inner.update_bits(data);
+    }
+
+    fn finalize(&mut self, output: &mut [u8]) -> anyhow::Result<()> {
+        self.inner.finalize(output, self.num_bits)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use bitvec::{bits, order::Lsb0};
+
+    use crate::{
+        Shake256, XofHasher,
+        test::{Mode, create_test_vector, format_output},
+    };
+
+    const NUM_BITS: usize = 4096;
+    const NUM_BYTES: usize = NUM_BITS / 8;
+    const SHAKE256_0_BITS: &str = "46 B9 DD 2B 0B A8 8D 13 23 3B 3F EB 74 3E EB 24 \
+3F CD 52 EA 62 B8 1B 82 B5 0C 27 64 6E D5 76 2F \
+D7 5D C4 DD D8 C0 F2 00 CB 05 01 9D 67 B5 92 F6 \
+FC 82 1C 49 47 9A B4 86 40 29 2E AC B3 B7 C4 BE \
+14 1E 96 61 6F B1 39 57 69 2C C7 ED D0 B4 5A E3 \
+DC 07 22 3C 8E 92 93 7B EF 84 BC 0E AB 86 28 53 \
+34 9E C7 55 46 F5 8F B7 C2 77 5C 38 46 2C 50 10 \
+D8 46 C1 85 C1 51 11 E5 95 52 2A 6B CD 16 CF 86 \
+F3 D1 22 10 9E 3B 1F DD 94 3B 6A EC 46 8A 2D 62 \
+1A 7C 06 C6 A9 57 C6 2B 54 DA FC 3B E8 75 67 D6 \
+77 23 13 95 F6 14 72 93 B6 8C EA B7 A9 E0 C5 8D \
+86 4E 8E FD E4 E1 B9 A4 6C BE 85 47 13 67 2F 5C \
+AA AE 31 4E D9 08 3D AB 4B 09 9F 8E 30 0F 01 B8 \
+65 0F 1F 4B 1D 8F CF 3F 3C B5 3F B8 E9 EB 2E A2 \
+03 BD C9 70 F5 0A E5 54 28 A9 1F 7F 53 AC 26 6B \
+28 41 9C 37 78 A1 5F D2 48 D3 39 ED E7 85 FB 7F \
+5A 1A AA 96 D3 13 EA CC 89 09 36 C1 73 CD CD 0F \
+AB 88 2C 45 75 5F EB 3A ED 96 D4 77 FF 96 39 0B \
+F9 A6 6D 13 68 B2 08 E2 1F 7C 10 D0 4A 3D BD 4E \
+36 06 33 E5 DB 4B 60 26 01 C1 4C EA 73 7D B3 DC \
+F7 22 63 2C C7 78 51 CB DD E2 AA F0 A3 3A 07 B3 \
+73 44 5D F4 90 CC 8F C1 E4 16 0F F1 18 37 8F 11 \
+F0 47 7D E0 55 A8 1A 9E DA 57 A4 A2 CF B0 C8 39 \
+29 D3 10 91 2F 72 9E C6 CF A3 6C 6A C6 A7 58 37 \
+14 30 45 D7 91 CC 85 EF F5 B2 19 32 F2 38 61 BC \
+F2 3A 52 B5 DA 67 EA F7 BA AE 0F 5F B1 36 9D B7 \
+8F 3A C4 5F 8C 4A C5 67 1D 85 73 5C DD DB 09 D2 \
+B1 E3 4A 1F C0 66 FF 4A 16 2C B2 63 D6 54 12 74 \
+AE 2F CC 86 5F 61 8A BE 27 C1 24 CD 8B 07 4C CD \
+51 63 01 B9 18 75 82 4D 09 95 8F 34 1E F2 74 BD \
+AB 0B AE 31 63 39 89 43 04 E3 58 77 B0 C2 8A 9B \
+1F D1 66 C7 96 B9 CC 25 8A 06 4A 8F 57 E2 7F 2A";
+    const SHAKE256_5_BITS: &str = "48 A5 C1 1A BA EE FF 09 2F 36 46 EF 0D 6B 3D 3F \
+F7 6C 2F 55 F9 C7 32 AC 64 70 C0 37 64 00 82 12 \
+E2 1B 14 67 77 8B 18 19 89 F8 88 58 21 1B 45 DF \
+87 99 CF 96 1F 80 0D FA C9 9E 64 40 39 E2 97 9A \
+40 16 F5 45 6F F4 21 C5 B3 85 DA 2B 85 5D A7 E3 \
+1C 8C 2E 8E 4B A4 1E B4 09 5C B9 99 D9 75 9C B4 \
+03 58 DA 85 62 A2 E6 13 49 E0 5A 2E 13 F1 B7 4E \
+C9 E6 9F 5B 42 6D C7 41 38 FF CD C5 71 C3 2B 39 \
+B9 F5 55 63 E1 A9 9D C4 22 C3 06 02 6D 6A 0F 9D \
+E8 51 62 B3 86 79 4C A0 68 8B 76 4B 3D 32 20 0C \
+C4 59 74 97 32 A0 F3 A3 41 C0 EF C9 6A 22 C6 3B \
+AD 7D 96 CC 9B A4 76 8C 6F CF A1 F2 00 10 7C F9 \
+FA E5 C0 D7 54 95 8C 5A 75 6B 37 6A 3B E6 9F 88 \
+07 4F 20 0E 9E 95 A8 CA 5B CF 96 99 98 DB 1D C3 \
+7D 0D 3D 91 6F 6C AA B3 F0 37 82 C9 C4 4A 2E 14 \
+E8 07 86 BE CE 45 87 B9 EF 82 CB F4 54 E0 E3 4B \
+D1 75 AE 57 D3 6A F4 E7 26 B2 21 33 2C ED 36 C8 \
+CE 2E 06 20 3C 65 6A E8 DA 03 7D 08 E7 16 0B 48 \
+0C 1A 85 16 BF 06 DD 97 BF 4A A4 C0 24 93 10 DC \
+0B 06 5D C6 39 57 63 55 38 4D 16 5C 6A 50 9B 12 \
+F7 BB D1 E1 5B 22 BC E0 2F A0 48 DD FA AC F7 41 \
+5F 49 B6 32 4C 1D 06 7B 52 64 E1 12 5F 7F 75 42 \
+7F 31 2B D9 34 6E B4 E4 00 B1 F7 CB 31 28 8C 9E \
+3F 73 5E CA 9C ED 0D B8 88 E2 E2 F4 02 24 3B D6 \
+46 18 A2 3E 10 F9 C2 29 39 74 40 54 2D 0A B1 B2 \
+E1 0D AC C5 C9 5E 59 7F 2C 7E A3 84 38 10 5F 97 \
+80 3D BB 03 FC C0 FD 41 6B 09 05 A4 1D 18 4D EB \
+23 89 05 77 58 91 F9 35 01 FB 41 76 A3 BD 6C 46 \
+44 61 D3 6E E8 B0 08 AA BD 9E 26 A3 40 55 E8 0C \
+8C 81 3E EB A0 7F 72 8A B3 2B 15 60 5A D1 61 A0 \
+66 9F 6F CE 5C 55 09 FB B6 AF D2 4A EA CC 5F A4 \
+A5 15 23 E6 B1 73 24 6E D4 BF A5 21 D7 4F C6 BB";
+    const SHAKE256_30_BITS: &str = "46 5D 08 1D FF 87 5E 39 62 00 E4 48 1A 3E 9D CD \
+88 D0 79 AA 6D 66 22 6C B6 BA 45 41 07 CB 81 A7 \
+84 1A B0 29 60 DE 27 9C CB E3 4B 42 C3 65 85 AD \
+86 96 4D B0 DB 52 B6 E7 B4 36 9E CE 8F 72 48 58 \
+9B A7 8A B1 82 8F FC 33 5C B1 23 97 11 9B FD 2B \
+87 EB 78 98 AE B9 56 B6 F2 3D DF 0B D4 00 43 86 \
+A8 E5 26 55 4E F4 E4 83 FA CE E3 0D D3 2E 20 4F \
+FF 8C 36 BB D6 02 A5 76 D1 39 08 9C 75 A8 05 02 \
+66 FC BF 72 1E 44 43 DE 46 45 83 29 22 EB 8A AE \
+39 D1 F5 72 84 53 64 81 7B 00 33 54 38 99 94 00 \
+23 F2 E9 65 A6 0A 80 EB 22 1E B1 9D C5 7B 12 12 \
+91 56 4C 6F 69 35 83 B3 AC 7C 6F 27 2F 4F 67 A1 \
+9A 76 78 D4 23 4B 0B F4 A2 EB C0 8A A2 35 B9 78 \
+8D B7 87 16 1F 66 17 02 28 65 C0 EF 9A A5 33 80 \
+2D 13 6C DB C7 AE BA 53 2A CF 1B E1 83 B0 29 5A \
+B0 E3 3A 2E F6 9B E3 56 DA AF 30 96 87 15 3E 2F \
+99 A1 24 36 09 D6 03 12 6A 8C 82 3E 88 43 E4 59 \
+BF C7 2B 30 69 1C DC C3 DD B2 7C F0 28 AF D5 1E \
+44 37 EE 3B 71 C0 C1 EC 87 A9 34 36 F0 C2 47 B7 \
+E8 C5 0C E9 68 25 C9 70 29 99 7A 74 C3 18 AF AC \
+AA 18 A0 18 0B C7 F2 F0 F1 C5 E7 EF 1A 2D 18 3A \
+C7 EE 7E 49 15 C3 B6 8C 30 97 8A B6 C4 28 19 34 \
+41 DF 47 05 B7 22 CE 25 A0 8A 1F AD CA 0E EF 1F \
+AF E8 3A DF 13 02 1D 52 0D E5 C8 27 FF 9A 97 B7 \
+55 46 19 3A 9B 92 3F 05 90 38 5D C4 BF F7 C4 9D \
+49 15 B5 A3 65 DB 4C 84 DD CB 18 5D E8 F9 EE B3 \
+34 96 5A 42 F1 38 1C 8B AD C2 2B A1 F8 EE 4C 0E \
+4D AA F7 A8 8E 7F 42 DD B8 14 8F 3B F8 D3 B8 D7 \
+4F 09 81 55 A3 7C B4 CB 27 87 6B 85 DA 60 2E 5C \
+78 9C 10 E0 3B E7 34 07 BA B8 C4 92 13 F8 C7 4E \
+12 66 CE 9B 11 28 6E 67 4C A9 C1 0C 9C 99 55 04 \
+9A 66 E9 05 1D 9A 2B 1F C9 AF E2 67 98 E9 CE C6";
+    const SHAKE256_1600_BITS: &str = "CD 8A 92 0E D1 41 AA 04 07 A2 2D 59 28 86 52 E9 \
+D9 F1 A7 EE 0C 1E 7C 1C A6 99 42 4D A8 4A 90 4D \
+2D 70 0C AA E7 39 6E CE 96 60 44 40 57 7D A4 F3 \
+AA 22 AE B8 85 7F 96 1C 4C D8 E0 6F 0A E6 61 0B \
+10 48 A7 F6 4E 10 74 CD 62 9E 85 AD 75 66 04 8E \
+FC 4F B5 00 B4 86 A3 30 9A 8F 26 72 4C 0E D6 28 \
+00 1A 10 99 42 24 68 DE 72 6F 10 61 D9 9E B9 E9 \
+36 04 D5 AA 74 67 D4 B1 BD 64 84 58 2A 38 43 17 \
+D7 F4 7D 75 0B 8F 54 99 51 2B B8 5A 22 6C 42 43 \
+55 6E 69 6F 6B D0 72 C5 AA 2D 9B 69 73 02 44 B5 \
+68 53 D1 69 70 AD 81 7E 21 3E 47 06 18 17 80 01 \
+C9 FB 56 C5 4F EF A5 FE E6 7D 2D A5 24 BB 3B 0B \
+61 EF 0E 91 14 A9 2C DB B6 CC CB 98 61 5C FE 76 \
+E3 51 0D D8 8D 1C C2 8F F9 92 87 51 2F 24 BF AF \
+A1 A7 68 77 B6 F3 71 98 E3 A6 41 C6 8A 7C 42 D4 \
+5F A7 AC C1 0D AE 5F 3C EF B7 B7 35 F1 2D 4E 58 \
+9F 7A 45 6E 78 C0 F5 E4 C4 47 1F FF A5 E4 FA 05 \
+14 AE 97 4D 8C 26 48 51 3B 5D B4 94 CE A8 47 15 \
+6D 27 7A D0 E1 41 C2 4C 78 39 06 4C D0 88 51 BC \
+2E 7C A1 09 FD 4E 25 1C 35 BB 0A 04 FB 05 B3 64 \
+FF 8C 4D 8B 59 BC 30 3E 25 32 8C 09 A8 82 E9 52 \
+51 8E 1A 8A E0 FF 26 5D 61 C4 65 89 69 73 D7 49 \
+04 99 DC 63 9F B8 50 2B 39 45 67 91 B1 B6 EC 5B \
+CC 5D 9A C3 6A 6D F6 22 A0 70 D4 3F ED 78 1F 5F \
+14 9F 7B 62 67 5E 7D 1A 4D 6D EC 48 C1 C7 16 45 \
+86 EA E0 6A 51 20 8C 0B 79 12 44 D3 07 72 65 05 \
+C3 AD 4B 26 B6 82 23 77 25 7A A1 52 03 75 60 A7 \
+39 71 4A 3C A7 9B D6 05 54 7C 9B 78 DD 1F 59 6F \
+2D 4F 17 91 BC 68 9A 0E 9B 79 9A 37 33 9C 04 27 \
+57 33 74 01 43 EF 5D 2B 58 B9 6A 36 3D 4E 08 07 \
+6A 1A 9D 78 46 43 6E 4D CA 57 28 B6 F7 60 EE F0 \
+CA 92 BF 0B E5 61 5E 96 95 9D 76 71 97 A0 BE EB";
+    const SHAKE256_1605_BITS: &str = "98 D0 93 B0 67 47 57 60 12 4F FB 92 04 A5 B3 27 \
+C6 BB 05 C5 4F F2 34 F0 B4 3F AC 72 40 41 51 66 \
+A8 C7 05 EA 0D 73 9F 08 08 B0 65 76 D9 96 66 2C \
+1F 37 66 94 D9 8F 51 57 19 B6 64 07 72 0D CF 78 \
+1C 51 CD 56 EF 8B 61 0C 66 8D DC 1A C1 C2 C4 29 \
+EA 4D 6F 27 4A A7 A7 73 BF 8B 0C AB 30 6F 1E EE \
+2A 17 1B 91 33 4E A0 FA CD 2A AC 1F 51 D4 D5 EB \
+0E 63 A4 E6 75 4E CA FE EC 24 6B 7A AF 58 D0 E0 \
+A9 74 C7 FF 40 58 BD BD ED B3 3E D0 4B 0F A4 5D \
+70 C7 C8 4F 3D A1 3E 4F 7D 1B ED DB 53 4D 37 E5 \
+AB DF B2 9F 2B 44 C4 FB 0D 6C CA B8 31 D9 0B A4 \
+6A 00 53 06 62 F9 07 DE DD 47 9E 9B 54 28 E5 E2 \
+DB 80 40 B0 E2 B1 F1 74 CE 34 7F 32 A0 6A 5A C2 \
+2B 19 AA FE 92 7B 88 78 D0 C8 10 3A 4D 2F 19 E3 \
+23 36 C6 4C FA DC 1B 9A CB 39 78 A8 29 85 71 DC \
+D8 9C 36 A6 56 92 81 6D 0C 61 CE 0E D1 79 42 36 \
+70 17 BD 40 F5 9D FB AE 34 63 58 27 92 0A FE 7A \
+27 BF 56 70 09 A1 38 40 3F 06 B6 E4 DE 94 DA 07 \
+7D B4 97 73 C2 35 46 61 19 42 6F 79 88 8D 3A 81 \
+B4 07 DF EB A8 7E 01 CD 48 F9 0E 01 B6 F9 02 43 \
+C4 01 25 DE 47 E8 C8 F3 E6 EA 33 88 CB FE EB 36 \
+54 1E F2 3D 2C 83 48 45 8E A2 8C AA 50 66 F4 98 \
+37 76 F0 CB 2F DC 66 04 9C F8 8A C8 EA E5 12 12 \
+AA CE 86 7B EA 4C 3C AE E4 4F 14 7A 9B F9 9D 04 \
+87 4E 87 22 D0 3D 3F 5F F6 EF 3B EB E7 64 2F E4 \
+91 6C 5F 10 FF 3F D6 13 87 D5 D9 1B CD 32 F9 E8 \
+E4 59 3D CA AD 23 EC CC 05 D2 FC 9B E2 C1 CD 63 \
+0E A1 23 DC A9 CB 69 38 D6 0C DD ED C1 1E 1E 9B \
+C9 D2 68 A5 45 6B A9 CC FF 18 59 7C 5F F9 73 57 \
+08 41 3B 9D 84 B9 F4 72 19 37 CC 65 95 71 27 97 \
+53 2B 48 D6 F1 A2 D1 72 3B 07 D5 46 0B C1 39 16 \
+D9 6E 88 18 07 13 AC 33 D2 C2 32 E3 5E 76 4E 04";
+    const SHAKE256_1630_BITS: &str = "8A 83 25 07 9B 0F C3 26 5D 52 F5 98 55 CA FE 65 \
+5D F4 38 AA 63 9F 6F EC 99 1F 24 94 33 0C E3 2F \
+A3 7F 7D B9 0F 69 66 D8 E4 A4 6E 50 C5 ED E5 7B \
+9B 8F 08 2A 96 62 7F 73 04 75 02 9A 61 92 29 D8 \
+4F 43 2E D6 9F D0 59 23 4D 4D 7D D3 58 E8 39 3F \
+6A 36 A4 5C CF 04 1F 90 FC 0A 4E 58 02 D7 30 63 \
+D3 65 31 33 6A 00 90 EC FE 1A 4D 4D 29 AA 82 4B \
+A4 2B 49 37 B4 BB 98 F4 F3 3A 0E 3B D8 B5 11 E6 \
+95 28 D5 95 37 11 0D 75 21 FB 78 AC A0 18 DF 76 \
+16 0F 54 A3 42 1B 84 14 92 64 ED 03 2F 6D CE 46 \
+7A 73 1A 8E 34 04 8E 3A 46 E9 80 39 DF 3C 32 8D \
+EB FB E5 D1 BC 8B E7 FF 4E F8 91 7B 01 F0 B7 89 \
+36 72 49 2D 6E E5 C7 1D F2 D0 53 1F 8B 68 47 64 \
+BA 0A 2B 57 EC 6A 4F 60 BA 4F 36 FE 2D B0 E6 5A \
+D7 AA 5F 14 F3 EF 9F 34 A0 AB 5B C3 3D 48 87 33 \
+BA 36 BF 4B 2B 4F CE 02 8E FF 8C 6C E0 3B 19 2C \
+F0 75 CC 9F 00 D2 9C 0E 06 C3 5C 44 89 D2 7F 07 \
+FA 49 A9 1C A9 24 71 E3 4D AB 77 87 AE 24 A6 E0 \
+F3 09 EF 0B A5 3F 7C 8B 29 92 52 0A 07 BE DD 50 \
+9A 0B 6D BE A5 70 A5 96 0E D6 24 82 6D D8 EC D1 \
+91 5C 87 32 7E 74 49 1C 40 5A 74 11 C1 2C 0D 44 \
+97 51 26 89 BD 7F 5A DB ED B0 2C 6D 2E 68 47 4E \
+8B F3 1B 88 40 40 81 8F 4B CA 03 A4 52 17 EA C7 \
+08 3A D3 A3 3C B8 47 7A 04 C9 E3 26 6A 13 34 77 \
+DE 45 E7 18 30 A4 0E B0 D0 75 AF CC FC D9 DC 54 \
+8D 0D 52 94 60 EA 7A C2 AD AC 72 2E 76 78 EF 59 \
+7D D3 B4 95 BD 7D 1A 8F F3 94 48 BB AB 1D C6 A8 \
+84 81 80 1C F5 A8 01 0E 87 3C 31 E4 79 A5 E3 DB \
+3D 4E 67 D1 D9 48 E6 7C C6 6F D7 5A 4A 19 C1 20 \
+66 2E F5 59 77 BD DB AC 07 21 C8 0D 69 90 26 93 \
+C8 3D 5E F7 BC 27 EF A3 93 AF 4C 43 9F C3 99 58 \
+E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
+
+    #[test]
+    /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg0.pdf>
+    fn test_shake256_0_bits() {
+        let mut hasher = Shake256::new(NUM_BITS);
+        let mut result = [0u8; NUM_BYTES];
+        hasher.finalize(&mut result).unwrap();
+        assert_eq!(SHAKE256_0_BITS, format_output(&result));
+    }
+
+    #[test]
+    /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg5.pdf>
+    fn test_shake256_5_bits() {
+        let mut hasher = Shake256::new(NUM_BITS);
+        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1]);
+        let mut result = [0u8; NUM_BYTES];
+        hasher.finalize(&mut result).unwrap();
+        assert_eq!(SHAKE256_5_BITS, format_output(&result));
+    }
+
+    #[test]
+    /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg30.pdf>
+    fn test_shake256_30_bits() {
+        let mut hasher = Shake256::new(NUM_BITS);
+        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0]);
+        let mut result = [0u8; NUM_BYTES];
+        hasher.finalize(&mut result).unwrap();
+        assert_eq!(SHAKE256_30_BITS, format_output(&result));
+    }
+
+    #[test]
+    /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg1600.pdf>
+    fn test_shake256_1600_bits() {
+        // Create 1600-bit test vector
+        let bit_vec = create_test_vector(Mode::Sha3_1600);
+        assert_eq!(1600, bit_vec.len());
+        let mut hasher = Shake256::new(NUM_BITS);
+        hasher.update_bits(bit_vec.as_bitslice());
+        let mut result = [0u8; NUM_BYTES];
+        hasher.finalize(&mut result).unwrap();
+        assert_eq!(SHAKE256_1600_BITS, format_output(&result));
+    }
+
+    #[test]
+    /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg1605.pdf>
+    fn test_shake256_1605_bits() {
+        // Create 1605-bit test vector
+        let bit_vec = create_test_vector(Mode::Sha3_1605);
+        assert_eq!(1605, bit_vec.len());
+        let mut hasher = Shake256::new(NUM_BITS);
+        hasher.update_bits(bit_vec.as_bitslice());
+        let mut result = [0u8; NUM_BYTES];
+        hasher.finalize(&mut result).unwrap();
+        assert_eq!(SHAKE256_1605_BITS, format_output(&result));
+    }
+
+    #[test]
+    /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg1630.pdf>
+    fn test_shake256_1630_bits() {
+        // Create 1630-bit test vector
+        let bit_vec = create_test_vector(Mode::Sha3_1630);
+        assert_eq!(1630, bit_vec.len());
+        let mut hasher = Shake256::new(NUM_BITS);
+        hasher.update_bits(bit_vec.as_bitslice());
+        let mut result = [0u8; NUM_BYTES];
+        hasher.finalize(&mut result).unwrap();
+        assert_eq!(SHAKE256_1630_BITS, format_output(&result));
+    }
+}

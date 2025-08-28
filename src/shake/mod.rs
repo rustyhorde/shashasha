@@ -12,6 +12,7 @@ use bitvec::{bits, order::Lsb0, slice::BitSlice};
 use crate::{Sponge, sponge::Keccak1600Sponge};
 
 pub(crate) mod shake128;
+pub(crate) mod shake256;
 
 /// SHA-3 XOF hash functions (SHAKE128 and SHAKE256)
 #[derive(Clone, Debug)]
