@@ -286,6 +286,9 @@ mod utils;
 
 pub use self::constants::LANE_COUNT;
 pub use self::constants::SHA3_224_BYTES;
+pub use self::constants::SHA3_256_BYTES;
+pub use self::constants::SHA3_384_BYTES;
+pub use self::constants::SHA3_512_BYTES;
 pub use self::error::Sha3Error;
 pub use self::keccak::f_200;
 pub use self::keccak::f_400;
@@ -302,7 +305,6 @@ pub use self::sha3::sha512::Sha3_512;
 pub use self::shake::shake128::Shake128;
 pub use self::shake::shake256::Shake256;
 pub use self::traits::Hasher;
-pub use self::traits::Sponge;
 pub use self::traits::XofHasher;
 pub use self::utils::b2h;
 pub use bitvec::prelude::BitSlice;
@@ -313,20 +315,7 @@ pub use bitvec::prelude::bitvec;
 
 #[cfg(test)]
 mod test {
-    use std::fmt::Write;
-
     use bitvec::{bits, bitvec, order::Lsb0, vec::BitVec};
-
-    pub(crate) fn format_output(result: &[u8]) -> String {
-        result
-            .iter()
-            .fold(String::new(), |mut acc, x| {
-                write!(acc, "{x:02X} ").unwrap();
-                acc
-            })
-            .trim_end()
-            .to_string()
-    }
 
     #[derive(Clone, Copy, Debug)]
     pub(crate) enum Mode {

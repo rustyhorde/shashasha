@@ -33,12 +33,12 @@ pub trait XofHasher {
     /// # Errors
     ///
     fn finalize(&mut self) -> Result<()>;
-    /// Start the squeezing phase and fill the requested number of bits.
+    /// Start the squeezing phase and fill the requested number of bytes.
     ///
     /// # Errors
     ///
     fn get_bytes(&mut self, output: &mut [u8], num_bytes: usize) -> Result<()>;
-    /// Finalize the hash computation and return the result.
+    /// Start the squeezing phase and fill the requested number of bits.
     ///
     /// # Errors
     ///
@@ -46,7 +46,7 @@ pub trait XofHasher {
 }
 
 /// A sponge trait for absorbing and squeezing data (Keccak for example)
-pub trait Sponge {
+pub(crate) trait Sponge {
     /// Update the sponge with the given data.
     fn update(&mut self, data: &[u8]);
 

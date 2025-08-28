@@ -9,7 +9,7 @@
 use anyhow::Result;
 use bitvec::{bits, order::Lsb0, slice::BitSlice, vec::BitVec};
 
-use crate::{Sponge, sponge::Keccak1600Sponge};
+use crate::{sponge::Keccak1600Sponge, traits::Sponge};
 
 pub(crate) mod shake128;
 pub(crate) mod shake256;

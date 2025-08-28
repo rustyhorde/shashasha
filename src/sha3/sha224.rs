@@ -57,12 +57,12 @@ impl Hasher<{ SHA3_224_BYTES }> for Sha3_224 {
 #[cfg(test)]
 mod test {
     use anyhow::Result;
-    use bitvec::{bits, order::Lsb0};
+    use bitvec::{bits, order::Lsb0, vec::BitVec};
 
     use crate::{
-        Hasher, Sha3_224,
+        Hasher, Sha3_224, b2h,
         constants::SHA3_224_BYTES,
-        test::{Mode, create_test_vector, format_output},
+        test::{Mode, create_test_vector},
     };
 
     const SHA3_224_0_BITS: &str =
@@ -82,70 +82,82 @@ mod test {
 
     #[test]
     /// <https://csrc.nist.gov/csrc/media/projects/cryptographic-standards-and-guidelines/documents/examples/sha3-224_msg0.pdf>
-    fn test_sha3_224_0_bits() {
+    fn test_sha3_224_0_bits() -> Result<()> {
         let mut hasher = Sha3_224::new();
         let mut result = [0u8; SHA3_224_BYTES];
-        hasher.finalize(&mut result).unwrap();
-        assert_eq!(SHA3_224_0_BITS, format_output(&result));
+        hasher.finalize(&mut result)?;
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHA3_224_0_BITS, res);
+        Ok(())
     }
 
     #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA3-224_Msg5.pdf>
-    fn test_sha3_224_5_bits() {
+    fn test_sha3_224_5_bits() -> Result<()> {
         let mut hasher = Sha3_224::new();
         hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1]);
         let mut result = [0u8; SHA3_224_BYTES];
-        hasher.finalize(&mut result).unwrap();
-        assert_eq!(SHA3_224_5_BITS, format_output(&result));
+        hasher.finalize(&mut result)?;
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHA3_224_5_BITS, res);
+        Ok(())
     }
 
     #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA3-224_Msg30.pdf>
-    fn test_sha3_224_30_bits() {
+    fn test_sha3_224_30_bits() -> Result<()> {
         let mut hasher = Sha3_224::new();
         hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0]);
         let mut result = [0u8; SHA3_224_BYTES];
-        hasher.finalize(&mut result).unwrap();
-        assert_eq!(SHA3_224_30_BITS, format_output(&result));
+        hasher.finalize(&mut result)?;
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHA3_224_30_BITS, res);
+        Ok(())
     }
 
     #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA3-224_1600.pdf>
-    fn test_sha3_224_1600_bits() {
+    fn test_sha3_224_1600_bits() -> Result<()> {
         // Create 1600-bit test vector
         let bit_vec = create_test_vector(Mode::Sha3_1600);
         assert_eq!(1600, bit_vec.len());
         let mut hasher = Sha3_224::new();
         hasher.update_bits(bit_vec.as_bitslice());
         let mut result = [0u8; SHA3_224_BYTES];
-        hasher.finalize(&mut result).unwrap();
-        assert_eq!(SHA3_224_1600_BITS, format_output(&result));
+        hasher.finalize(&mut result)?;
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHA3_224_1600_BITS, res);
+        Ok(())
     }
 
     #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA3-224_1605.pdf>
-    fn test_sha3_224_1605_bits() {
+    fn test_sha3_224_1605_bits() -> Result<()> {
         // Create 1605-bit test vector
         let bit_vec = create_test_vector(Mode::Sha3_1605);
         assert_eq!(1605, bit_vec.len());
         let mut hasher = Sha3_224::new();
         hasher.update_bits(bit_vec.as_bitslice());
         let mut result = [0u8; SHA3_224_BYTES];
-        hasher.finalize(&mut result).unwrap();
-        assert_eq!(SHA3_224_1605_BITS, format_output(&result));
+        hasher.finalize(&mut result)?;
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHA3_224_1605_BITS, res);
+        Ok(())
     }
 
     #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA3-224_1630.pdf>
-    fn test_sha3_224_1630_bits() {
+    fn test_sha3_224_1630_bits() -> Result<()> {
         // Create 1630-bit test vector
         let bit_vec = create_test_vector(Mode::Sha3_1630);
         assert_eq!(1630, bit_vec.len());
         let mut hasher = Sha3_224::new();
         hasher.update_bits(bit_vec.as_bitslice());
         let mut result = [0u8; SHA3_224_BYTES];
-        hasher.finalize(&mut result).unwrap();
-        assert_eq!(SHA3_224_1630_BITS, format_output(&result));
+        hasher.finalize(&mut result)?;
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHA3_224_1630_BITS, res);
+        Ok(())
     }
 
     #[test]
@@ -155,7 +167,8 @@ mod test {
         hasher.update(b"Yoda!");
         hasher.finalize(&mut result)?;
         assert_eq!(result.len(), SHA3_224_BYTES);
-        assert_eq!(SHA3_224_BYTES_OUT, format_output(&result));
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHA3_224_BYTES_OUT, res);
         Ok(())
     }
 }

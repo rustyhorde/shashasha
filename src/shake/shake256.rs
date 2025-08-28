@@ -16,14 +16,14 @@ use crate::{
     sponge::Keccak1600Sponge,
 };
 
-/// SHAKE256 XOR function
+/// SHAKE256 XOF function (`SHAKE256(M, d) = KECCAK[512](M||1111, d)`)
 #[derive(Clone, Debug)]
 pub struct Shake256 {
     inner: Shake,
 }
 
 impl Shake256 {
-    /// Create a new SHAKE256 XOR hasher instance.
+    /// Create a new SHAKE256 XOF hasher instance.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -65,11 +65,11 @@ impl XofHasher for Shake256 {
 #[cfg(test)]
 mod test {
     use anyhow::Result;
-    use bitvec::{bits, order::Lsb0};
+    use bitvec::{bits, order::Lsb0, vec::BitVec};
 
     use crate::{
-        Shake256, XofHasher,
-        test::{Mode, create_test_vector, format_output},
+        Shake256, XofHasher, b2h,
+        test::{Mode, create_test_vector},
     };
 
     const NUM_BITS: usize = 4096;
@@ -274,7 +274,8 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
-        assert_eq!(SHAKE256_0_BITS, format_output(&result));
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHAKE256_0_BITS, res);
         Ok(())
     }
 
@@ -286,7 +287,8 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
-        assert_eq!(SHAKE256_5_BITS, format_output(&result));
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHAKE256_5_BITS, res);
         Ok(())
     }
 
@@ -298,7 +300,8 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
-        assert_eq!(SHAKE256_30_BITS, format_output(&result));
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHAKE256_30_BITS, res);
         Ok(())
     }
 
@@ -313,7 +316,8 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
-        assert_eq!(SHAKE256_1600_BITS, format_output(&result));
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHAKE256_1600_BITS, res);
         Ok(())
     }
 
@@ -328,7 +332,8 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
-        assert_eq!(SHAKE256_1605_BITS, format_output(&result));
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHAKE256_1605_BITS, res);
         Ok(())
     }
 
@@ -343,7 +348,8 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
-        assert_eq!(SHAKE256_1630_BITS, format_output(&result));
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHAKE256_1630_BITS, res);
         Ok(())
     }
 }

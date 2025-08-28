@@ -17,19 +17,22 @@ pub(crate) const SHA3_224_RATE: usize = SHA3_WIDTH - SHA3_224_CAPACITY;
 
 /// SHA-256 constants
 pub(crate) const SHA3_256_BITS: usize = 256;
-pub(crate) const SHA3_256_BYTES: usize = SHA3_256_BITS / 8;
+/// The output size for the SHA3-256 hash function in bytes
+pub const SHA3_256_BYTES: usize = SHA3_256_BITS / 8;
 pub(crate) const SHA3_256_CAPACITY: usize = 2 * SHA3_256_BITS;
 pub(crate) const SHA3_256_RATE: usize = SHA3_WIDTH - SHA3_256_CAPACITY;
 
 /// SHA-384 constants
 pub(crate) const SHA3_384_BITS: usize = 384;
-pub(crate) const SHA3_384_BYTES: usize = SHA3_384_BITS / 8;
+/// The output size for the SHA3-384 hash function in bytes
+pub const SHA3_384_BYTES: usize = SHA3_384_BITS / 8;
 pub(crate) const SHA3_384_CAPACITY: usize = 2 * SHA3_384_BITS;
 pub(crate) const SHA3_384_RATE: usize = SHA3_WIDTH - SHA3_384_CAPACITY;
 
 /// SHA-512 constants
 pub(crate) const SHA3_512_BITS: usize = 512;
-pub(crate) const SHA3_512_BYTES: usize = SHA3_512_BITS / 8;
+/// The output size for the SHA3-512 hash function in bytes
+pub const SHA3_512_BYTES: usize = SHA3_512_BITS / 8;
 pub(crate) const SHA3_512_CAPACITY: usize = 2 * SHA3_512_BITS;
 pub(crate) const SHA3_512_RATE: usize = SHA3_WIDTH - SHA3_512_CAPACITY;
 

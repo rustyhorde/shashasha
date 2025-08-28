@@ -9,7 +9,7 @@
 use anyhow::Result;
 use bitvec::{field::BitField, order::Lsb0, slice::BitSlice, vec::BitVec, view::BitView};
 
-use crate::{Sha3Error, Sponge, constants::LANE_COUNT, f_1600};
+use crate::{Sha3Error, constants::LANE_COUNT, f_1600, traits::Sponge};
 
 #[derive(Clone, Debug)]
 pub(crate) struct Keccak1600Sponge {
