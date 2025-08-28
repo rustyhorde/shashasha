@@ -307,6 +307,7 @@ pub use self::shake::shake256::Shake256;
 pub use self::traits::Hasher;
 pub use self::traits::HasherBits;
 pub use self::traits::XofHasher;
+pub use self::traits::XofHasherBits;
 pub use self::utils::b2h;
 pub use bitvec::prelude::BitSlice;
 pub use bitvec::prelude::BitVec;

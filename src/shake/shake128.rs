@@ -10,7 +10,7 @@ use anyhow::Result;
 use bitvec::{order::Lsb0, slice::BitSlice, vec::BitVec};
 
 use crate::{
-    XofHasher,
+    XofHasher, XofHasherBits,
     constants::{SHAKE_128_CAPACITY, SHAKE_128_RATE},
     shake::Shake,
     sponge::Keccak1600Sponge,
@@ -45,16 +45,18 @@ impl XofHasher for Shake128 {
         self.inner.update(data);
     }
 
-    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
-        self.inner.update_bits(data);
-    }
-
     fn finalize(&mut self) -> Result<()> {
         self.inner.finalize()
     }
 
     fn get_bytes(&mut self, output: &mut [u8], num_bytes: usize) -> Result<()> {
         self.inner.get_bytes(output, num_bytes)
+    }
+}
+
+impl XofHasherBits for Shake128 {
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
+        self.inner.update_bits(data);
     }
 
     fn get_bits(&mut self, output: &mut BitVec<u8, Lsb0>, num_bits: usize) -> Result<()> {
@@ -68,7 +70,7 @@ mod test {
     use bitvec::{bits, order::Lsb0, vec::BitVec};
 
     use crate::{
-        Shake128, XofHasher, b2h,
+        Shake128, XofHasher, XofHasherBits, b2h,
         test::{Mode, create_test_vector},
     };
 

@@ -26,12 +26,10 @@ pub trait HasherBits<const D_BYTES: usize> {
     fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>);
 }
 
-/// Trait for hashing data with an arbitrary output size.
+/// Trait for hashing data with an arbitrary output size and byte input data.
 pub trait XofHasher {
     /// Update the hasher with new byte data.
     fn update(&mut self, data: &[u8]);
-    /// Update the hasher with new bits
-    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>);
     /// Finalize the absorbing phase.
     ///
     /// # Errors
@@ -42,6 +40,12 @@ pub trait XofHasher {
     /// # Errors
     ///
     fn get_bytes(&mut self, output: &mut [u8], num_bytes: usize) -> Result<()>;
+}
+
+/// Trait for hashing data with an arbitrary output size and `BitSlice` input data.
+pub trait XofHasherBits {
+    /// Update the hasher with new bits
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>);
     /// Start the squeezing phase and fill the requested number of bits.
     ///
     /// # Errors
