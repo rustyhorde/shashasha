@@ -9,17 +9,21 @@
 use anyhow::Result;
 use bitvec::{order::Lsb0, slice::BitSlice, vec::BitVec};
 
-/// Trait for hashing data with a fixed output size.
+/// Trait for hashing data with a fixed output size and byte input.
 pub trait Hasher<const D_BYTES: usize> {
     /// Update the hasher with new byte data.
     fn update(&mut self, data: &[u8]);
-    /// Update the hasher with new bits
-    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>);
     /// Finalize the hash computation and return the result.
     ///
     /// # Errors
     ///
     fn finalize(&mut self, output: &mut [u8; D_BYTES]) -> Result<()>;
+}
+
+/// Trait for hashing data with a fixed output size and `BitSlice` input.
+pub trait HasherBits<const D_BYTES: usize> {
+    /// Update the hasher with new bits
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>);
 }
 
 /// Trait for hashing data with an arbitrary output size.

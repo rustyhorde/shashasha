@@ -12,7 +12,7 @@
 //!
 //! ```
 //! # use anyhow::Result;
-//! # use shashasha::{b2h, bits, BitVec, Hasher, Lsb0, Sha3_224, SHA3_224_BYTES};
+//! # use shashasha::{b2h, bits, BitVec, Hasher, HasherBits, Lsb0, Sha3_224, SHA3_224_BYTES};
 //! # pub fn main() -> Result<()> {
 //! // Hash some byte data
 //! let mut hasher = Sha3_224::new();
@@ -305,6 +305,7 @@ pub use self::sha3::sha512::Sha3_512;
 pub use self::shake::shake128::Shake128;
 pub use self::shake::shake256::Shake256;
 pub use self::traits::Hasher;
+pub use self::traits::HasherBits;
 pub use self::traits::XofHasher;
 pub use self::utils::b2h;
 pub use bitvec::prelude::BitSlice;

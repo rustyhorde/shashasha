@@ -10,7 +10,7 @@ use anyhow::Result;
 use bitvec::{order::Lsb0, slice::BitSlice};
 
 use crate::{
-    Hasher,
+    Hasher, HasherBits,
     constants::{SHA3_224_BYTES, SHA3_224_CAPACITY, SHA3_224_RATE},
     sha3::Sha3,
     sponge::Keccak1600Sponge,
@@ -45,12 +45,14 @@ impl Hasher<{ SHA3_224_BYTES }> for Sha3_224 {
         self.inner.update(data);
     }
 
-    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
-        self.inner.update_bits(data);
-    }
-
     fn finalize(&mut self, output: &mut [u8; SHA3_224_BYTES]) -> Result<()> {
         self.inner.finalize(output)
+    }
+}
+
+impl HasherBits<{ SHA3_224_BYTES }> for Sha3_224 {
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
+        self.inner.update_bits(data);
     }
 }
 
@@ -60,7 +62,7 @@ mod test {
     use bitvec::{bits, order::Lsb0, vec::BitVec};
 
     use crate::{
-        Hasher, Sha3_224, b2h,
+        Hasher, HasherBits, Sha3_224, b2h,
         constants::SHA3_224_BYTES,
         test::{Mode, create_test_vector},
     };
