@@ -49,12 +49,16 @@ impl XofHasher for Shake128 {
         self.inner.update_bits(data);
     }
 
-    fn finalize(&mut self, output: &mut [u8], num_bits: usize) -> Result<()> {
-        self.inner.finalize(output, num_bits)
+    fn finalize(&mut self) -> Result<()> {
+        self.inner.finalize()
     }
 
-    fn finalize_b(&mut self, output: &mut BitVec<u8, Lsb0>, num_bits: usize) -> Result<()> {
-        self.inner.finalize_b(output, num_bits)
+    fn get_bytes(&mut self, output: &mut [u8], num_bytes: usize) -> Result<()> {
+        self.inner.get_bytes(output, num_bytes)
+    }
+
+    fn get_bits(&mut self, output: &mut BitVec<u8, Lsb0>, num_bits: usize) -> Result<()> {
+        self.inner.get_bits(output, num_bits)
     }
 }
 
@@ -102,6 +106,22 @@ E6 E2 14 3F 1A F1 8D A7 EF DD C4 C7 B7 0B 5E 34 \
 A9 FF 00 DD 4E 13 00 B9 B2 15 3D 20 41 D2 05 B4 \
 43 E4 1B 45 A6 53 F2 A5 C4 49 2C 1A DD 54 45 12 \
 DD A2 52 98 33 46 2B 71 A4 1A 45 BE 97 29 0B 6F";
+    const SHAKE128_0_BITS_2048: &str = "7F 9C 2B A4 E8 8F 82 7D 61 60 45 50 76 05 85 3E \
+D7 3B 80 93 F6 EF BC 88 EB 1A 6E AC FA 66 EF 26 \
+3C B1 EE A9 88 00 4B 93 10 3C FB 0A EE FD 2A 68 \
+6E 01 FA 4A 58 E8 A3 63 9C A8 A1 E3 F9 AE 57 E2 \
+35 B8 CC 87 3C 23 DC 62 B8 D2 60 16 9A FA 2F 75 \
+AB 91 6A 58 D9 74 91 88 35 D2 5E 6A 43 50 85 B2 \
+BA DF D6 DF AA C3 59 A5 EF BB 7B CC 4B 59 D5 38 \
+DF 9A 04 30 2E 10 C8 BC 1C BF 1A 0B 3A 51 20 EA \
+17 CD A7 CF AD 76 5F 56 23 47 4D 36 8C CC A8 AF \
+00 07 CD 9F 5E 4C 84 9F 16 7A 58 0B 14 AA BD EF \
+AE E7 EE F4 7C B0 FC A9 76 7B E1 FD A6 94 19 DF \
+B9 27 E9 DF 07 34 8B 19 66 91 AB AE B5 80 B3 2D \
+EF 58 53 8B 8D 23 F8 77 32 EA 63 B0 2B 4F A0 F4 \
+87 33 60 E2 84 19 28 CD 60 DD 4C EE 8C C0 D4 C9 \
+22 A9 61 88 D0 32 67 5C 8A C8 50 93 3C 7A FF 15 \
+33 B9 4C 83 4A DB B6 9C 61 15 BA D4 69 2D 86 19";
     const SHAKE128_0_BITS_4094: &str = "7F 9C 2B A4 E8 8F 82 7D 61 60 45 50 76 05 85 3E \
 D7 3B 80 93 F6 EF BC 88 EB 1A 6E AC FA 66 EF 26 \
 3C B1 EE A9 88 00 4B 93 10 3C FB 0A EE FD 2A 68 \
@@ -332,7 +352,8 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
     fn test_shake128_0_bits() -> Result<()> {
         let mut hasher = Shake128::new();
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result, NUM_BITS)?;
+        hasher.finalize()?;
+        hasher.get_bytes(&mut result, NUM_BYTES)?;
         assert_eq!(SHAKE128_0_BITS, format_output(&result));
         Ok(())
     }
@@ -342,10 +363,28 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
     fn test_shake128_0_bits_in_4094_out() -> Result<()> {
         let mut hasher = Shake128::new();
         let mut result = BitVec::<u8, Lsb0>::with_capacity(4094);
-        hasher.finalize_b(&mut result, 4094)?;
+        hasher.finalize()?;
+        hasher.get_bits(&mut result, 4094)?;
         assert_eq!(4094, result.len());
         let res = b2h(&result, true, true)?;
         assert_eq!(SHAKE128_0_BITS_4094, res);
+        Ok(())
+    }
+
+    #[test]
+    fn test_shake128_0_bits_in_2048_out_twice() -> Result<()> {
+        // Check the first 2048 bits match the 4096 output.
+        let mut hasher = Shake128::new();
+        let mut result = BitVec::<u8, Lsb0>::with_capacity(4096);
+        hasher.finalize()?;
+        hasher.get_bits(&mut result, 2048)?;
+        assert_eq!(2048, result.len());
+        let res = b2h(&result, true, true)?;
+        assert_eq!(SHAKE128_0_BITS_2048, res);
+        hasher.get_bits(&mut result, 2048)?;
+        assert_eq!(4096, result.len());
+        let res = b2h(&result, true, true)?;
+        assert_eq!(SHAKE128_0_BITS, res);
         Ok(())
     }
 
@@ -354,7 +393,8 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
     fn test_shake128_0_bits_in_4088_out() -> Result<()> {
         let mut hasher = Shake128::new();
         let mut result = BitVec::<u8, Lsb0>::with_capacity(4088);
-        hasher.finalize_b(&mut result, 4088)?;
+        hasher.finalize()?;
+        hasher.get_bits(&mut result, 4088)?;
         assert_eq!(4088, result.len());
         let res = b2h(&result, true, true)?;
         assert_eq!(SHAKE128_0_BITS_4088, res);
@@ -367,7 +407,8 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
         let mut hasher = Shake128::new();
         hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1]);
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result, NUM_BITS)?;
+        hasher.finalize()?;
+        hasher.get_bytes(&mut result, NUM_BYTES)?;
         assert_eq!(SHAKE128_5_BITS, format_output(&result));
         Ok(())
     }
@@ -378,7 +419,8 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
         let mut hasher = Shake128::new();
         hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0]);
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result, NUM_BITS)?;
+        hasher.finalize()?;
+        hasher.get_bytes(&mut result, NUM_BYTES)?;
         assert_eq!(SHAKE128_30_BITS, format_output(&result));
         Ok(())
     }
@@ -392,7 +434,8 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
         let mut hasher = Shake128::new();
         hasher.update_bits(bit_vec.as_bitslice());
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result, NUM_BITS)?;
+        hasher.finalize()?;
+        hasher.get_bytes(&mut result, NUM_BYTES)?;
         assert_eq!(SHAKE128_1600_BITS, format_output(&result));
         Ok(())
     }
@@ -406,7 +449,8 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
         let mut hasher = Shake128::new();
         hasher.update_bits(bit_vec.as_bitslice());
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result, NUM_BITS)?;
+        hasher.finalize()?;
+        hasher.get_bytes(&mut result, NUM_BYTES)?;
         assert_eq!(SHAKE128_1605_BITS, format_output(&result));
         Ok(())
     }
@@ -420,7 +464,8 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
         let mut hasher = Shake128::new();
         hasher.update_bits(bit_vec.as_bitslice());
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result, NUM_BITS)?;
+        hasher.finalize()?;
+        hasher.get_bytes(&mut result, NUM_BYTES)?;
         let res = b2h(&BitVec::<u8, Lsb0>::from_slice(&result), true, true)?;
         assert_eq!(SHAKE128_1630_BITS, res);
         Ok(())

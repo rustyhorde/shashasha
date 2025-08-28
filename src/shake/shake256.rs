@@ -49,12 +49,16 @@ impl XofHasher for Shake256 {
         self.inner.update_bits(data);
     }
 
-    fn finalize(&mut self, output: &mut [u8], num_bits: usize) -> Result<()> {
-        self.inner.finalize(output, num_bits)
+    fn finalize(&mut self) -> Result<()> {
+        self.inner.finalize()
     }
 
-    fn finalize_b(&mut self, output: &mut BitVec<u8, Lsb0>, num_bits: usize) -> Result<()> {
-        self.inner.finalize_b(output, num_bits)
+    fn get_bytes(&mut self, output: &mut [u8], num_bytes: usize) -> Result<()> {
+        self.inner.get_bytes(output, num_bytes)
+    }
+
+    fn get_bits(&mut self, output: &mut BitVec<u8, Lsb0>, num_bits: usize) -> Result<()> {
+        self.inner.get_bits(output, num_bits)
     }
 }
 
@@ -268,7 +272,8 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
     fn test_shake256_0_bits() -> Result<()> {
         let mut hasher = Shake256::new();
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result, NUM_BITS)?;
+        hasher.finalize()?;
+        hasher.get_bytes(&mut result, NUM_BYTES)?;
         assert_eq!(SHAKE256_0_BITS, format_output(&result));
         Ok(())
     }
@@ -279,7 +284,8 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let mut hasher = Shake256::new();
         hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1]);
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result, NUM_BITS)?;
+        hasher.finalize()?;
+        hasher.get_bytes(&mut result, NUM_BYTES)?;
         assert_eq!(SHAKE256_5_BITS, format_output(&result));
         Ok(())
     }
@@ -290,7 +296,8 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let mut hasher = Shake256::new();
         hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0]);
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result, NUM_BITS)?;
+        hasher.finalize()?;
+        hasher.get_bytes(&mut result, NUM_BYTES)?;
         assert_eq!(SHAKE256_30_BITS, format_output(&result));
         Ok(())
     }
@@ -304,7 +311,8 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let mut hasher = Shake256::new();
         hasher.update_bits(bit_vec.as_bitslice());
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result, NUM_BITS)?;
+        hasher.finalize()?;
+        hasher.get_bytes(&mut result, NUM_BYTES)?;
         assert_eq!(SHAKE256_1600_BITS, format_output(&result));
         Ok(())
     }
@@ -318,7 +326,8 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let mut hasher = Shake256::new();
         hasher.update_bits(bit_vec.as_bitslice());
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result, NUM_BITS)?;
+        hasher.finalize()?;
+        hasher.get_bytes(&mut result, NUM_BYTES)?;
         assert_eq!(SHAKE256_1605_BITS, format_output(&result));
         Ok(())
     }
@@ -332,7 +341,8 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let mut hasher = Shake256::new();
         hasher.update_bits(bit_vec.as_bitslice());
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result, NUM_BITS)?;
+        hasher.finalize()?;
+        hasher.get_bytes(&mut result, NUM_BYTES)?;
         assert_eq!(SHAKE256_1630_BITS, format_output(&result));
         Ok(())
     }

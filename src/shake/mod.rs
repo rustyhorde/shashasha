@@ -31,25 +31,25 @@ impl Shake {
         self.sponge.update_bits(data);
     }
 
-    pub(crate) fn finalize(&mut self, output: &mut [u8], num_bits: usize) -> Result<()> {
+    pub(crate) fn finalize(&mut self) -> Result<()> {
         // Append the SHAKE domain separation bits (0b1111) to the message
         self.sponge.update_bits(bits![u8, Lsb0; 1, 1, 1, 1]);
         // Start the absorbing phase
         self.sponge.absorb()?;
-        // Start the squeezing phase
-        self.sponge.squeeze(output, num_bits)?;
         Ok(())
     }
 
-    pub(crate) fn finalize_b(
+    pub(crate) fn get_bytes(&mut self, output: &mut [u8], num_bytes: usize) -> Result<()> {
+        // Start the squeezing phase
+        self.sponge.squeeze(output, num_bytes * 8)?;
+        Ok(())
+    }
+
+    pub(crate) fn get_bits(
         &mut self,
         output: &mut BitVec<u8, Lsb0>,
         num_bits: usize,
     ) -> Result<()> {
-        // Append the SHAKE domain separation bits (0b1111) to the message
-        self.sponge.update_bits(bits![u8, Lsb0; 1, 1, 1, 1]);
-        // Start the absorbing phase
-        self.sponge.absorb()?;
         // Start the squeezing phase
         self.sponge.squeeze_b(output, num_bits)?;
         Ok(())

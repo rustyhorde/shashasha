@@ -19,6 +19,7 @@ pub(crate) struct Keccak1600Sponge {
     message: BitVec<u8, Lsb0>,
     rate: usize,
     capacity: usize,
+    output: BitVec<u8, Lsb0>,
 }
 
 impl Default for Keccak1600Sponge {
@@ -34,6 +35,7 @@ impl Keccak1600Sponge {
         Self {
             state: [0u64; LANE_COUNT],
             message: BitVec::new(),
+            output: BitVec::new(),
             rate,
             capacity,
         }
@@ -57,7 +59,8 @@ impl Keccak1600Sponge {
         Ok(())
     }
 
-    fn state_to_bits(&self) -> BitVec<u8, Lsb0> {
+    fn fill_output(&mut self) {
+        self.output.clear();
         let mut byte_vec = Vec::new();
         for s in &self.state {
             byte_vec.extend(s.to_le_bytes());
@@ -69,46 +72,42 @@ impl Keccak1600Sponge {
             let slice = byte.view_bits::<Lsb0>();
             bits_vec.extend_from_bitslice(slice);
         }
-        bits_vec
+        self.output.extend_from_bitslice(&bits_vec[..self.rate]);
     }
 
-    fn squeeze(&mut self, output: &mut [u8], num_bits: &mut usize, pos: &mut usize) {
-        let state_bits = self.state_to_bits();
-        let mut output_bits = BitVec::<u8, Lsb0>::new();
+    fn squeeze(&mut self, output: &mut [u8], num_bits: usize) -> Result<()> {
+        let mut bit_vec = BitVec::<u8, Lsb0>::new();
+        self.squeeze_b(&mut bit_vec, num_bits)?;
 
-        if *num_bits < self.rate {
-            // If the number of bits requested is less than or equal to the rate
-            // take out that number of bits
-            output_bits.extend_from_bitslice(&state_bits[..*num_bits]);
-            *num_bits = 0;
-        } else {
-            // Take out the rate number of bits and ignore the capacity bits
-            output_bits.extend_from_bitslice(&state_bits[..self.rate]);
-            *num_bits -= self.rate;
-        }
-
-        for eight_bits in output_bits.chunks_exact(8) {
+        for (idx, eight_bits) in bit_vec.chunks_exact(8).enumerate() {
             let value: u8 = eight_bits.load_le::<u8>();
-            output[*pos] = value;
-            *pos += 1;
+            output[idx] = value;
         }
+        Ok(())
     }
 
-    fn squeeze_b(&mut self, output: &mut BitVec<u8, Lsb0>, num_bits: &mut usize, pos: &mut usize) {
-        let state_bits = self.state_to_bits();
-
-        if *num_bits <= state_bits.len() - self.capacity {
-            // If the number of bits requested is less than or equal to the rate
-            // take out that number of bits
-            output.extend_from_bitslice(&state_bits[..*num_bits]);
-            *num_bits = 0;
-        } else {
-            // Take out the rate number of bits and ignore the capacity bits
-            output.extend_from_bitslice(&state_bits[..self.rate]);
-            *num_bits -= self.rate;
+    fn squeeze_b(&mut self, output: &mut BitVec<u8, Lsb0>, requested_bits: usize) -> Result<()> {
+        if self.output.is_empty() {
+            self.fill_output();
+            self.output.reverse();
         }
+        let mut num_bits = requested_bits;
 
-        *pos += output.len();
+        while num_bits > 0 {
+            while let Some(bit) = self.output.pop() {
+                output.push(bit);
+                num_bits -= 1;
+                if num_bits == 0 {
+                    break;
+                }
+            }
+            if num_bits > 0 {
+                self.keccak()?;
+                self.fill_output();
+                self.output.reverse();
+            }
+        }
+        Ok(())
     }
 }
 
@@ -153,33 +152,14 @@ impl Sponge for Keccak1600Sponge {
 
     fn squeeze(&mut self, output: &mut [u8], num_bits: usize) -> Result<()> {
         if output.len() == num_bits / 8 {
-            // Squeeze output until we have enough bits
-            let mut remaining_bits = num_bits;
-            let mut pos = 0;
-            self.squeeze(output, &mut remaining_bits, &mut pos);
-
-            while remaining_bits > 0 {
-                self.keccak()?;
-                self.squeeze(output, &mut remaining_bits, &mut pos);
-            }
-            Ok(())
+            self.squeeze(output, num_bits)
         } else {
             Err(Sha3Error::OutputLengthMismatch(output.len(), num_bits / 8).into())
         }
     }
 
     fn squeeze_b(&mut self, output: &mut BitVec<u8, Lsb0>, num_bits: usize) -> Result<()> {
-        // Squeeze output until we have enough bits
-        let mut remaining_bits = num_bits;
-        let mut pos = 0;
-        self.squeeze_b(output, &mut remaining_bits, &mut pos);
-
-        while remaining_bits > 0 {
-            self.keccak()?;
-            self.squeeze_b(output, &mut remaining_bits, &mut pos);
-        }
-
-        Ok(())
+        self.squeeze_b(output, num_bits)
     }
 }
 

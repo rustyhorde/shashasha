@@ -28,16 +28,21 @@ pub trait XofHasher {
     fn update(&mut self, data: &[u8]);
     /// Update the hasher with new bits
     fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>);
-    /// Finalize the hash computation and return the result (byte-aligned).
+    /// Finalize the absorbing phase.
     ///
     /// # Errors
     ///
-    fn finalize(&mut self, output: &mut [u8], num_bits: usize) -> Result<()>;
+    fn finalize(&mut self) -> Result<()>;
+    /// Start the squeezing phase and fill the requested number of bits.
+    ///
+    /// # Errors
+    ///
+    fn get_bytes(&mut self, output: &mut [u8], num_bytes: usize) -> Result<()>;
     /// Finalize the hash computation and return the result.
     ///
     /// # Errors
     ///
-    fn finalize_b(&mut self, output: &mut BitVec<u8, Lsb0>, num_bits: usize) -> Result<()>;
+    fn get_bits(&mut self, output: &mut BitVec<u8, Lsb0>, num_bits: usize) -> Result<()>;
 }
 
 /// A sponge trait for absorbing and squeezing data (Keccak for example)
