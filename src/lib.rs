@@ -6,7 +6,37 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! sha3 implemmentation
+//! # SHA3
+//!
+//! <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf>
+//!
+//! ```
+//! # use anyhow::Result;
+//! # use shashasha::{b2h, bits, BitVec, Hasher, Lsb0, Sha3_224, SHA3_224_BYTES};
+//! # pub fn main() -> Result<()> {
+//! // Hash some byte data
+//! let mut hasher = Sha3_224::new();
+//! let mut result = [0u8; SHA3_224_BYTES];
+//! hasher.update(b"Hello, world!");
+//! hasher.finalize(&mut result)?;
+//! assert_eq!(result.len(), SHA3_224_BYTES);
+//! let res = b2h(&BitVec::<u8, Lsb0>::from_slice(&result), false, false)?;
+//! assert_eq!("6a33e22f20f16642697e8bd549ff7b759252ad56c05a1b0acc31dc69", res);
+//!
+//! // ...or hash some bits
+//! let mut hasher = Sha3_224::new();
+//! let mut result = [0u8; SHA3_224_BYTES];
+//! hasher.update_bits(bits![u8, Lsb0; 1, 0, 1]);
+//! hasher.finalize(&mut result)?;
+//! assert_eq!(result.len(), SHA3_224_BYTES);
+//! let res = b2h(&BitVec::<u8, Lsb0>::from_slice(&result), false, false)?;
+//! assert_eq!("d115e9e3c619f6180c234dba721b302ffe0992df07eeea47464923c0", res);
+//!
+//!
+//! #     Ok(())
+//! # }
+//! ```
+//!
 
 // rustc lints
 #![cfg_attr(
@@ -25,8 +55,8 @@
 #![cfg_attr(
     nightly,
     deny(
+        aarch64_softfloat_neon,
         absolute_paths_not_starting_with_crate,
-        ambiguous_glob_imports,
         ambiguous_glob_reexports,
         ambiguous_negative_literals,
         ambiguous_wide_pointer_comparisons,
@@ -44,6 +74,7 @@
         confusable_idents,
         const_evaluatable_unchecked,
         const_item_mutation,
+        dangling_pointers_from_locals,
         dangling_pointers_from_temporaries,
         dead_code,
         dependency_on_unit_never_type_fallback,
@@ -87,12 +118,14 @@
         keyword_idents_2024,
         large_assignments,
         late_bound_lifetime_arguments,
-        legacy_derive_helpers,
         let_underscore_drop,
         macro_use_extern_crate,
+        malformed_diagnostic_attributes,
+        malformed_diagnostic_format_literals,
         map_unit_fn,
         meta_variable_misuse,
         mismatched_lifetime_syntaxes,
+        misplaced_diagnostic_attributes,
         missing_abi,
         missing_copy_implementations,
         missing_debug_implementations,
@@ -112,7 +145,6 @@
         non_upper_case_globals,
         noop_method_call,
         opaque_hidden_inferred_bound,
-        out_of_scope_macro_calls,
         overlapping_range_endpoints,
         path_statements,
         private_bounds,
@@ -133,7 +165,6 @@
         rust_2024_incompatible_pat,
         rust_2024_prelude_collisions,
         self_constructor_from_outer_item,
-        semicolon_in_expressions_from_macros,
         single_use_lifetimes,
         special_module_name,
         stable_features,
@@ -153,10 +184,11 @@
         ungated_async_fn_track_caller,
         uninhabited_static,
         unit_bindings,
+        unknown_diagnostic_attributes,
         unknown_lints,
-        unknown_or_malformed_diagnostic_attributes,
         unnameable_test_items,
         unnameable_types,
+        unnecessary_transmutes,
         unpredictable_function_pointer_comparisons,
         unreachable_code,
         unreachable_patterns,
@@ -166,6 +198,7 @@
         unsafe_op_in_unsafe_fn,
         unstable_name_collisions,
         unstable_syntax_pre_expansion,
+        unsupported_calling_conventions,
         unused_allocation,
         unused_assignments,
         unused_associated_type_bounds,
@@ -249,7 +282,10 @@ mod sha3;
 mod shake;
 mod sponge;
 mod traits;
+mod utils;
 
+pub use self::constants::LANE_COUNT;
+pub use self::constants::SHA3_224_BYTES;
 pub use self::error::Sha3Error;
 pub use self::keccak::f_200;
 pub use self::keccak::f_400;
@@ -259,7 +295,6 @@ pub use self::keccak::p_200;
 pub use self::keccak::p_400;
 pub use self::keccak::p_800;
 pub use self::keccak::p_1600;
-pub use self::lane::Lane;
 pub use self::sha3::sha224::Sha3_224;
 pub use self::sha3::sha256::Sha3_256;
 pub use self::sha3::sha384::Sha3_384;
@@ -269,6 +304,12 @@ pub use self::shake::shake256::Shake256;
 pub use self::traits::Hasher;
 pub use self::traits::Sponge;
 pub use self::traits::XofHasher;
+pub use self::utils::b2h;
+pub use bitvec::prelude::BitSlice;
+pub use bitvec::prelude::BitVec;
+pub use bitvec::prelude::Lsb0;
+pub use bitvec::prelude::bits;
+pub use bitvec::prelude::bitvec;
 
 #[cfg(test)]
 mod test {

@@ -11,7 +11,7 @@ use thiserror::Error;
 /// Sha3 Error
 #[derive(Copy, Clone, Debug, Error)]
 pub enum Sha3Error {
-    /// Thrown if the round count is not allowed for the given [`Lane`](crate::lane::Lane) size
+    /// Thrown if the round count is not allowed for the given `Lane` size
     #[error("Invalid round count")]
     InvalidRoundCount(usize),
     /// Thrown if the truncate function fails for the given round constant

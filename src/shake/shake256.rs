@@ -6,7 +6,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use bitvec::{order::Lsb0, slice::BitSlice};
+use anyhow::Result;
+use bitvec::{order::Lsb0, slice::BitSlice, vec::BitVec};
 
 use crate::{
     XofHasher,
@@ -19,19 +20,23 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct Shake256 {
     inner: Shake,
-    num_bits: usize,
 }
 
 impl Shake256 {
     /// Create a new SHAKE256 XOR hasher instance.
     #[must_use]
-    pub fn new(num_bits: usize) -> Self {
+    pub fn new() -> Self {
         Self {
-            num_bits,
             inner: Shake {
                 sponge: Keccak1600Sponge::new(SHAKE_256_RATE, SHAKE_256_CAPACITY),
             },
         }
+    }
+}
+
+impl Default for Shake256 {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -44,13 +49,18 @@ impl XofHasher for Shake256 {
         self.inner.update_bits(data);
     }
 
-    fn finalize(&mut self, output: &mut [u8]) -> anyhow::Result<()> {
-        self.inner.finalize(output, self.num_bits)
+    fn finalize(&mut self, output: &mut [u8], num_bits: usize) -> Result<()> {
+        self.inner.finalize(output, num_bits)
+    }
+
+    fn finalize_b(&mut self, output: &mut BitVec<u8, Lsb0>, num_bits: usize) -> Result<()> {
+        self.inner.finalize_b(output, num_bits)
     }
 }
 
 #[cfg(test)]
 mod test {
+    use anyhow::Result;
     use bitvec::{bits, order::Lsb0};
 
     use crate::{
@@ -255,69 +265,75 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
 
     #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg0.pdf>
-    fn test_shake256_0_bits() {
-        let mut hasher = Shake256::new(NUM_BITS);
+    fn test_shake256_0_bits() -> Result<()> {
+        let mut hasher = Shake256::new();
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result).unwrap();
+        hasher.finalize(&mut result, NUM_BITS)?;
         assert_eq!(SHAKE256_0_BITS, format_output(&result));
+        Ok(())
     }
 
     #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg5.pdf>
-    fn test_shake256_5_bits() {
-        let mut hasher = Shake256::new(NUM_BITS);
+    fn test_shake256_5_bits() -> Result<()> {
+        let mut hasher = Shake256::new();
         hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1]);
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result).unwrap();
+        hasher.finalize(&mut result, NUM_BITS)?;
         assert_eq!(SHAKE256_5_BITS, format_output(&result));
+        Ok(())
     }
 
     #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg30.pdf>
-    fn test_shake256_30_bits() {
-        let mut hasher = Shake256::new(NUM_BITS);
+    fn test_shake256_30_bits() -> Result<()> {
+        let mut hasher = Shake256::new();
         hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0]);
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result).unwrap();
+        hasher.finalize(&mut result, NUM_BITS)?;
         assert_eq!(SHAKE256_30_BITS, format_output(&result));
+        Ok(())
     }
 
     #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg1600.pdf>
-    fn test_shake256_1600_bits() {
+    fn test_shake256_1600_bits() -> Result<()> {
         // Create 1600-bit test vector
         let bit_vec = create_test_vector(Mode::Sha3_1600);
         assert_eq!(1600, bit_vec.len());
-        let mut hasher = Shake256::new(NUM_BITS);
+        let mut hasher = Shake256::new();
         hasher.update_bits(bit_vec.as_bitslice());
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result).unwrap();
+        hasher.finalize(&mut result, NUM_BITS)?;
         assert_eq!(SHAKE256_1600_BITS, format_output(&result));
+        Ok(())
     }
 
     #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg1605.pdf>
-    fn test_shake256_1605_bits() {
+    fn test_shake256_1605_bits() -> Result<()> {
         // Create 1605-bit test vector
         let bit_vec = create_test_vector(Mode::Sha3_1605);
         assert_eq!(1605, bit_vec.len());
-        let mut hasher = Shake256::new(NUM_BITS);
+        let mut hasher = Shake256::new();
         hasher.update_bits(bit_vec.as_bitslice());
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result).unwrap();
+        hasher.finalize(&mut result, NUM_BITS)?;
         assert_eq!(SHAKE256_1605_BITS, format_output(&result));
+        Ok(())
     }
 
     #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg1630.pdf>
-    fn test_shake256_1630_bits() {
+    fn test_shake256_1630_bits() -> Result<()> {
         // Create 1630-bit test vector
         let bit_vec = create_test_vector(Mode::Sha3_1630);
         assert_eq!(1630, bit_vec.len());
-        let mut hasher = Shake256::new(NUM_BITS);
+        let mut hasher = Shake256::new();
         hasher.update_bits(bit_vec.as_bitslice());
         let mut result = [0u8; NUM_BYTES];
-        hasher.finalize(&mut result).unwrap();
+        hasher.finalize(&mut result, NUM_BITS)?;
         assert_eq!(SHAKE256_1630_BITS, format_output(&result));
+        Ok(())
     }
 }

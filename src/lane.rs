@@ -16,7 +16,7 @@ use std::{
 use anyhow::Result;
 
 /// A Keccak lane
-pub trait Lane:
+pub(crate) trait Lane:
     Copy
     + Clone
     + Debug

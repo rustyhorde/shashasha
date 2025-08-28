@@ -6,11 +6,12 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-//! A Keccak implementation
+//! A Keccak implementation derived from <https://github.com/RustCrypto/sponges/tree/master/keccak>
+//!
 
 use crate::{
     Sha3Error,
-    constants::{ARR_SIZE, PI, RHO, ROUND_CONSTS},
+    constants::{LANE_COUNT, PI, RHO, ROUND_CONSTS},
     lane::Lane,
 };
 
@@ -22,7 +23,7 @@ use anyhow::Result;
 ///
 /// If the round count is larger than the round count for the given lane an error will be thrown.
 ///
-pub fn p_200(state: &mut [u8; ARR_SIZE], round_count: usize) -> Result<()> {
+pub fn p_200(state: &mut [u8; LANE_COUNT], round_count: usize) -> Result<()> {
     keccak_p::<u8>(state, round_count)
 }
 
@@ -32,7 +33,7 @@ pub fn p_200(state: &mut [u8; ARR_SIZE], round_count: usize) -> Result<()> {
 ///
 /// If the round count is larger than the round count for the give lane an error will be thrown.
 ///
-pub fn f_200(state: &mut [u8; ARR_SIZE]) -> Result<()> {
+pub fn f_200(state: &mut [u8; LANE_COUNT]) -> Result<()> {
     p_200(state, u8::KECCAK_F_ROUND_COUNT)
 }
 
@@ -42,7 +43,7 @@ pub fn f_200(state: &mut [u8; ARR_SIZE]) -> Result<()> {
 ///
 /// If the round count is larger than the round count for the given lane an error will be thrown.
 ///
-pub fn p_400(state: &mut [u16; ARR_SIZE], round_count: usize) -> Result<()> {
+pub fn p_400(state: &mut [u16; LANE_COUNT], round_count: usize) -> Result<()> {
     keccak_p::<u16>(state, round_count)
 }
 
@@ -52,7 +53,7 @@ pub fn p_400(state: &mut [u16; ARR_SIZE], round_count: usize) -> Result<()> {
 ///
 /// If the round count is larger than the round count for the give lane an error will be thrown.
 ///
-pub fn f_400(state: &mut [u16; ARR_SIZE]) -> Result<()> {
+pub fn f_400(state: &mut [u16; LANE_COUNT]) -> Result<()> {
     p_400(state, u16::KECCAK_F_ROUND_COUNT)
 }
 
@@ -62,7 +63,7 @@ pub fn f_400(state: &mut [u16; ARR_SIZE]) -> Result<()> {
 ///
 /// If the round count is larger than the round count for the given lane an error will be thrown.
 ///
-pub fn p_800(state: &mut [u32; ARR_SIZE], round_count: usize) -> Result<()> {
+pub fn p_800(state: &mut [u32; LANE_COUNT], round_count: usize) -> Result<()> {
     keccak_p::<u32>(state, round_count)
 }
 
@@ -72,7 +73,7 @@ pub fn p_800(state: &mut [u32; ARR_SIZE], round_count: usize) -> Result<()> {
 ///
 /// If the round count is larger than the round count for the give lane an error will be thrown.
 ///
-pub fn f_800(state: &mut [u32; ARR_SIZE]) -> Result<()> {
+pub fn f_800(state: &mut [u32; LANE_COUNT]) -> Result<()> {
     p_800(state, u32::KECCAK_F_ROUND_COUNT)
 }
 
@@ -82,7 +83,7 @@ pub fn f_800(state: &mut [u32; ARR_SIZE]) -> Result<()> {
 ///
 /// If the round count is larger than the round count for the given lane an error will be thrown.
 ///
-pub fn p_1600(state: &mut [u64; ARR_SIZE], round_count: usize) -> Result<()> {
+pub fn p_1600(state: &mut [u64; LANE_COUNT], round_count: usize) -> Result<()> {
     keccak_p::<u64>(state, round_count)
 }
 
@@ -92,32 +93,30 @@ pub fn p_1600(state: &mut [u64; ARR_SIZE], round_count: usize) -> Result<()> {
 ///
 /// If the round count is larger than the round count for the give lane an error will be thrown.
 ///
-pub fn f_1600(state: &mut [u64; ARR_SIZE]) -> Result<()> {
+pub fn f_1600(state: &mut [u64; LANE_COUNT]) -> Result<()> {
     p_1600(state, u64::KECCAK_F_ROUND_COUNT)
 }
 
-fn keccak_p<L: Lane>(state: &mut [L; ARR_SIZE], round_count: usize) -> Result<()> {
+fn keccak_p<L: Lane>(state: &mut [L; LANE_COUNT], round_count: usize) -> Result<()> {
     if round_count <= L::KECCAK_F_ROUND_COUNT {
-        // https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf#page=25
-        // "the rounds of KECCAK-p[b, nr] match the last rounds of KECCAK-f[b]"
         let round_consts =
             &ROUND_CONSTS[(L::KECCAK_F_ROUND_COUNT - round_count)..L::KECCAK_F_ROUND_COUNT];
 
         for round_const in round_consts {
             let mut array = [L::default(); 5];
 
-            // Theta
             for x in 0..5 {
                 for y in 0..5 {
                     array[x] ^= state[5 * y + x];
                 }
             }
 
+            // Theta
             for x in 0..5 {
-                let theta_1 = array[(x + 4) % 5];
-                let theta_2 = array[(x + 1) % 5].rotate_left(1);
+                let parity_1 = array[(x + 4) % 5];
+                let parity_2 = array[(x + 1) % 5].rotate_left(1);
                 for y in 0..5 {
-                    state[5 * y + x] ^= theta_1 ^ theta_2;
+                    state[5 * y + x] ^= parity_1 ^ parity_2;
                 }
             }
 
@@ -154,7 +153,7 @@ fn keccak_p<L: Lane>(state: &mut [L; ARR_SIZE], round_count: usize) -> Result<()
 
 #[cfg(test)]
 mod test {
-    use crate::{constants::ARR_SIZE, f_200, f_400, f_800, f_1600};
+    use crate::{constants::LANE_COUNT, f_200, f_400, f_800, f_1600};
 
     use super::keccak_p;
 
@@ -162,10 +161,10 @@ mod test {
 
     #[test]
     fn invalid_round_count_is_error() {
-        assert!(keccak_p::<u8>(&mut [0u8; ARR_SIZE], 19).is_err());
-        assert!(keccak_p::<u16>(&mut [0u16; ARR_SIZE], 21).is_err());
-        assert!(keccak_p::<u32>(&mut [0u32; ARR_SIZE], 23).is_err());
-        assert!(keccak_p::<u64>(&mut [0u64; ARR_SIZE], 25).is_err());
+        assert!(keccak_p::<u8>(&mut [0u8; LANE_COUNT], 19).is_err());
+        assert!(keccak_p::<u16>(&mut [0u16; LANE_COUNT], 21).is_err());
+        assert!(keccak_p::<u32>(&mut [0u32; LANE_COUNT], 23).is_err());
+        assert!(keccak_p::<u64>(&mut [0u64; LANE_COUNT], 25).is_err());
     }
 
     #[test]
@@ -181,7 +180,7 @@ mod test {
             0x31, 0x66, 0xA1, 0x4B, 0xE8, 0x27, 0xD9, 0x50, 0x40, 0x47, 0x9E,
         ];
 
-        let mut state = [0u8; ARR_SIZE];
+        let mut state = [0u8; LANE_COUNT];
         f_200(&mut state)?;
         assert_eq!(state, state_first);
         f_200(&mut state)?;
@@ -204,7 +203,7 @@ mod test {
             0xC224, 0xB85C, 0x097C,
         ];
 
-        let mut state = [0u16; ARR_SIZE];
+        let mut state = [0u16; LANE_COUNT];
         f_400(&mut state)?;
         assert_eq!(state, state_first);
         f_400(&mut state)?;
@@ -271,7 +270,7 @@ mod test {
             0xB3_783_BAB,
         ];
 
-        let mut state = [0u32; ARR_SIZE];
+        let mut state = [0u32; LANE_COUNT];
         f_800(&mut state)?;
         assert_eq!(state, state_first);
         f_800(&mut state)?;
@@ -338,7 +337,7 @@ mod test {
             0x2_0D0_6CD_26A_8FB_F5C,
         ];
 
-        let mut state = [0u64; ARR_SIZE];
+        let mut state = [0u64; LANE_COUNT];
         f_1600(&mut state)?;
         assert_eq!(state, state_first);
         f_1600(&mut state)?;

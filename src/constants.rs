@@ -10,7 +10,8 @@ pub(crate) const SHA3_WIDTH: usize = 1600;
 
 // SHA-224 constants
 pub(crate) const SHA3_224_BITS: usize = 224;
-pub(crate) const SHA3_224_BYTES: usize = SHA3_224_BITS / 8;
+/// The output size for the SHA3-224 hash function in bytes
+pub const SHA3_224_BYTES: usize = SHA3_224_BITS / 8;
 pub(crate) const SHA3_224_CAPACITY: usize = 2 * SHA3_224_BITS;
 pub(crate) const SHA3_224_RATE: usize = SHA3_WIDTH - SHA3_224_CAPACITY;
 
@@ -40,7 +41,8 @@ pub(crate) const SHAKE_128_RATE: usize = SHA3_WIDTH - SHAKE_128_CAPACITY;
 pub(crate) const SHAKE_256_CAPACITY: usize = 512;
 pub(crate) const SHAKE_256_RATE: usize = SHA3_WIDTH - SHAKE_256_CAPACITY;
 
-pub(crate) const ARR_SIZE: usize = 25;
+/// The number of lanes in the state array used by the keccak function
+pub const LANE_COUNT: usize = 25;
 pub(crate) const RHO: [u32; 24] = [
     1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14, 27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44,
 ];

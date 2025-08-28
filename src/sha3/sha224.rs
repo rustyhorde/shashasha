@@ -16,7 +16,7 @@ use crate::{
     sponge::Keccak1600Sponge,
 };
 
-/// SHA3-224 hash function
+/// SHA3-224 hash function (`SHA3-224(M) = KECCAK[448](M||01, 224)`)
 #[derive(Clone, Debug)]
 pub struct Sha3_224 {
     inner: Sha3<{ SHA3_224_BYTES }>,
@@ -56,6 +56,7 @@ impl Hasher<{ SHA3_224_BYTES }> for Sha3_224 {
 
 #[cfg(test)]
 mod test {
+    use anyhow::Result;
     use bitvec::{bits, order::Lsb0};
 
     use crate::{
@@ -76,6 +77,8 @@ mod test {
         "22 D2 F7 BB 0B 17 3F D8 C1 96 86 F9 17 31 66 E3 EE 62 73 80 47 D7 EA DD 69 EF B2 28";
     const SHA3_224_1630_BITS: &str =
         "4E 90 7B B1 05 78 61 F2 00 A5 99 E9 D4 F8 5B 02 D8 84 53 BF 5B 8A CE 9A C5 89 13 4C";
+    const SHA3_224_BYTES_OUT: &str =
+        "D7 5F 68 8C D8 27 6A 58 07 3A 8F EB 21 8C A2 D5 74 D4 1B 86 76 9D F6 65 7D 00 96 E7";
 
     #[test]
     /// <https://csrc.nist.gov/csrc/media/projects/cryptographic-standards-and-guidelines/documents/examples/sha3-224_msg0.pdf>
@@ -143,5 +146,16 @@ mod test {
         let mut result = [0u8; SHA3_224_BYTES];
         hasher.finalize(&mut result).unwrap();
         assert_eq!(SHA3_224_1630_BITS, format_output(&result));
+    }
+
+    #[test]
+    fn test_sha3_224_byte_data() -> Result<()> {
+        let mut hasher = Sha3_224::new();
+        let mut result = [0u8; SHA3_224_BYTES];
+        hasher.update(b"Yoda!");
+        hasher.finalize(&mut result)?;
+        assert_eq!(result.len(), SHA3_224_BYTES);
+        assert_eq!(SHA3_224_BYTES_OUT, format_output(&result));
+        Ok(())
     }
 }

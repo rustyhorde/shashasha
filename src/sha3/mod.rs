@@ -7,7 +7,7 @@
 // modified, or distributed except according to those terms.
 
 use anyhow::Result;
-use bitvec::{bits, order::Lsb0, slice::BitSlice, vec::BitVec};
+use bitvec::{bits, order::Lsb0, slice::BitSlice};
 
 use crate::{Sponge, sponge::Keccak1600Sponge};
 
@@ -43,39 +43,4 @@ impl<const B: usize> Sha3<B> {
         self.sponge.squeeze(output, num_bits)?;
         Ok(())
     }
-}
-
-#[allow(dead_code)]
-fn b2h(bits: &BitVec<u8, Lsb0>, include_space: bool) -> Result<String> {
-    use std::fmt::Write;
-
-    let mut res = String::new();
-    for i in 0..bits.len() / 8 {
-        let mut value: u8 = 0;
-        for j in 0..8 {
-            value += u8::from(bits[8 * i + j]) * 2u8.pow(j.try_into()?);
-        }
-        write!(res, "{value:02X}")?;
-        if include_space {
-            res.push(' ');
-        }
-    }
-    Ok(res)
-}
-
-#[allow(dead_code)]
-pub(crate) fn display(bv: &BitVec<u8, Lsb0>) -> Result<()> {
-    let chunks = bv.chunks_exact(128);
-    let mut final_idx = 0;
-    for (idx, bs) in &mut chunks.clone().enumerate() {
-        eprintln!("{idx:04}: {}", b2h(&bs.to_bitvec(), true)?);
-        final_idx = idx;
-    }
-    final_idx += 1;
-
-    let rem = chunks.remainder();
-    if !rem.is_empty() {
-        eprintln!("{final_idx:04}: {}", b2h(&rem.to_bitvec(), true)?);
-    }
-    Ok(())
 }
