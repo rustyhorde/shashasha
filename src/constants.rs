@@ -32,6 +32,10 @@ pub(crate) const SHA3_512_BYTES: usize = SHA3_512_BITS / 8;
 pub(crate) const SHA3_512_CAPACITY: usize = 2 * SHA3_512_BITS;
 pub(crate) const SHA3_512_RATE: usize = SHA3_WIDTH - SHA3_512_CAPACITY;
 
+/// SHAKE128 constants
+pub(crate) const SHAKE_128_CAPACITY: usize = 256;
+pub(crate) const SHAKE_128_RATE: usize = SHA3_WIDTH - SHAKE_128_CAPACITY;
+
 pub(crate) const ARR_SIZE: usize = 25;
 pub(crate) const RHO: [u32; 24] = [
     1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14, 27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44,

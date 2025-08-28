@@ -9,22 +9,7 @@
 use anyhow::Result;
 use bitvec::{field::BitField, order::Lsb0, slice::BitSlice, vec::BitVec, view::BitView};
 
-use crate::{Sha3Error, constants::ARR_SIZE, f_1600};
-
-/// A sponge trait for absorbing and squeezing data (Keccak for example)
-pub trait Sponge {
-    /// Absorb input data into the sponge state.
-    fn absorb(&mut self, data: &[u8]);
-
-    /// Absorb input data as bits into the sponge state.
-    fn absorb_bits(&mut self, data: &BitSlice<u8, Lsb0>);
-
-    /// Squeezed output data from the sponge state.  The state will be squeezed multiple times if necessary to fill the output.
-    ///
-    /// # Errors
-    /// This function will return an error if the number of bits to squeeze is invalid.
-    fn squeezed(&mut self, output: &mut [u8], num_bits: usize) -> Result<()>;
-}
+use crate::{Sha3Error, Sponge, constants::ARR_SIZE, f_1600};
 
 #[derive(Clone, Debug)]
 pub(crate) struct Keccak1600Sponge {
@@ -87,65 +72,78 @@ impl Keccak1600Sponge {
         bits_vec
     }
 
-    fn squeeze(&mut self, output: &mut [u8], num_bits: &mut usize) {
+    fn squeeze(&mut self, output: &mut [u8], num_bits: &mut usize, pos: &mut usize) {
         let state_bits = self.state_to_bits();
+        let mut output_bits = BitVec::<u8, Lsb0>::new();
 
-        if *num_bits <= state_bits.len() {
-            let output_bits = &state_bits[..*num_bits];
-
-            for (idx, eight_bits) in output_bits.chunks_exact(8).enumerate() {
-                let value: u8 = eight_bits.load_le::<u8>();
-                output[idx] = value;
-            }
+        if *num_bits <= state_bits.len() - self.capacity {
+            // If the number of bits requested is less than or equal to the rate
+            // take out that number of bits
+            output_bits.extend_from_bitslice(&state_bits[..*num_bits]);
             *num_bits = 0;
+        } else {
+            // Take out the rate number of bits and ignore the capacity bits
+            output_bits.extend_from_bitslice(&state_bits[..self.rate]);
+            *num_bits -= self.rate;
+        }
+
+        for eight_bits in output_bits.chunks_exact(8) {
+            let value: u8 = eight_bits.load_le::<u8>();
+            output[*pos] = value;
+            *pos += 1;
         }
     }
 }
 
 impl Sponge for Keccak1600Sponge {
-    fn absorb(&mut self, data: &[u8]) {
+    fn update(&mut self, data: &[u8]) {
         // Update the internal state with the new data
         self.message.extend_from_raw_slice(data);
     }
 
-    fn absorb_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
         // Update the internal state with the new bits
         self.message.extend_from_bitslice(data);
     }
 
-    fn squeezed(&mut self, output: &mut [u8], num_bits: usize) -> Result<()> {
+    fn absorb(&mut self) -> Result<()> {
+        // Process the absorbed message
+        let mut chunks = self.message.chunks_exact(self.rate);
+        let mut bvs = Vec::new();
+        for bits in &mut chunks {
+            let mut bv = bits.to_bitvec();
+            pad10star1(&mut bv, self.rate)?;
+            zero_pad(&mut bv, self.capacity);
+            bvs.push(bv);
+        }
+
+        let rem = chunks.remainder();
+
+        if !rem.is_empty() {
+            let mut bv = rem.to_bitvec();
+            pad10star1(&mut bv, self.rate)?;
+            zero_pad(&mut bv, self.capacity);
+            bvs.push(bv);
+        }
+
+        for bv in bvs {
+            self.xor_block(&bv)?;
+            self.keccak()?;
+        }
+
+        Ok(())
+    }
+
+    fn squeeze(&mut self, output: &mut [u8], num_bits: usize) -> Result<()> {
         if output.len() == num_bits / 8 {
-            // Process the absorbed message
-            let mut chunks = self.message.chunks_exact(self.rate);
-            let mut bvs = Vec::new();
-            for bits in &mut chunks {
-                let mut bv = bits.to_bitvec();
-                pad10star1(&mut bv, self.rate)?;
-                zero_pad(&mut bv, self.capacity);
-                bvs.push(bv);
-            }
-
-            let rem = chunks.remainder();
-
-            if !rem.is_empty() {
-                let mut bv = rem.to_bitvec();
-                pad10star1(&mut bv, self.rate)?;
-                zero_pad(&mut bv, self.capacity);
-                bvs.push(bv);
-            }
-
-            for bv in bvs {
-                self.xor_block(&bv)?;
-                self.keccak()?;
-            }
-
             // Squeeze output until we have enough bits
             let mut remaining_bits = num_bits;
-            self.squeeze(output, &mut remaining_bits);
+            let mut pos = 0;
+            self.squeeze(output, &mut remaining_bits, &mut pos);
 
             while remaining_bits > 0 {
                 self.keccak()?;
-                self.squeeze(output, &mut remaining_bits);
+                self.squeeze(output, &mut remaining_bits, &mut pos);
             }
             Ok(())
         } else {

@@ -246,7 +246,9 @@ mod error;
 mod keccak;
 mod lane;
 mod sha3;
+mod shake;
 mod sponge;
+mod traits;
 
 pub use self::error::Sha3Error;
 pub use self::keccak::f_200;
@@ -258,9 +260,57 @@ pub use self::keccak::p_400;
 pub use self::keccak::p_800;
 pub use self::keccak::p_1600;
 pub use self::lane::Lane;
-pub use self::sha3::Hasher;
 pub use self::sha3::sha224::Sha3_224;
 pub use self::sha3::sha256::Sha3_256;
 pub use self::sha3::sha384::Sha3_384;
 pub use self::sha3::sha512::Sha3_512;
-pub use self::sponge::Sponge;
+pub use self::shake::shake128::Shake128;
+pub use self::traits::Hasher;
+pub use self::traits::Sponge;
+pub use self::traits::XofHasher;
+
+#[cfg(test)]
+mod test {
+    use std::fmt::Write;
+
+    use bitvec::{bits, bitvec, order::Lsb0, vec::BitVec};
+
+    pub(crate) fn format_output(result: &[u8]) -> String {
+        result
+            .iter()
+            .fold(String::new(), |mut acc, x| {
+                write!(acc, "{x:02X} ").unwrap();
+                acc
+            })
+            .trim_end()
+            .to_string()
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    pub(crate) enum Mode {
+        Sha3_1600,
+        Sha3_1605,
+        Sha3_1630,
+    }
+
+    pub(crate) fn create_test_vector(mode: Mode) -> BitVec<u8, Lsb0> {
+        // Create 1600-bit test vector
+        let mut bit_vec = bitvec![u8, Lsb0;];
+        for _ in 0..50 {
+            bit_vec.extend_from_bitslice(bits![u8, Lsb0; 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1]);
+        }
+
+        match mode {
+            Mode::Sha3_1600 => {}
+            // Add 5 bits for 1605-bit test vector
+            Mode::Sha3_1605 => {
+                bit_vec.extend_from_bitslice(bits![u8, Lsb0; 1, 1, 0, 0, 0]);
+            }
+            // Add 30 bits for 1630-bit test vector
+            Mode::Sha3_1630 => {
+                bit_vec.extend_from_bitslice(bits![u8, Lsb0; 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1]);
+            }
+        }
+        bit_vec
+    }
+}

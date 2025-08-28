@@ -61,7 +61,7 @@ mod test {
     use crate::{
         Hasher, Sha3_512,
         constants::SHA3_512_BYTES,
-        sha3::test::{Mode, create_test_vector, format_output},
+        test::{Mode, create_test_vector, format_output},
     };
 
     const SHA3_512_0_BITS: &str = "A6 9F 73 CC A2 3A 9A C5 C8 B5 67 DC 18 5A 75 6E 97 C9 82 16 4F E2 58 59 E0 D1 DC C1 47 5C 80 A6 15 B2 12 3A F1 F5 F9 4C 11 E3 E9 40 2C 3A C5 58 F5 00 19 9D 95 B6 D3 E3 01 75 85 86 28 1D CD 26";
