@@ -20,6 +20,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct Shake256 {
     inner: Shake,
+    finalized: bool,
 }
 
 impl Shake256 {
@@ -27,6 +28,7 @@ impl Shake256 {
     #[must_use]
     pub fn new() -> Self {
         Self {
+            finalized: false,
             inner: Shake {
                 sponge: Keccak1600Sponge::new(SHAKE_256_RATE, SHAKE_256_CAPACITY),
             },
@@ -40,13 +42,32 @@ impl Default for Shake256 {
     }
 }
 
+impl Iterator for Shake256 {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.finalized && self.finalize().is_err() {
+            None
+        } else {
+            let mut byte = [0u8; 1];
+            if self.get_bytes(&mut byte, 1).is_ok() {
+                Some(byte[0])
+            } else {
+                None
+            }
+        }
+    }
+}
+
 impl XofHasher for Shake256 {
     fn update(&mut self, data: &[u8]) {
         self.inner.update(data);
     }
 
     fn finalize(&mut self) -> Result<()> {
-        self.inner.finalize()
+        self.inner.finalize()?;
+        self.finalized = true;
+        Ok(())
     }
 
     fn get_bytes(&mut self, output: &mut [u8], num_bytes: usize) -> Result<()> {
@@ -278,6 +299,21 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         hasher.get_bytes(&mut result, NUM_BYTES)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
         assert_eq!(SHAKE256_0_BITS, res);
+        Ok(())
+    }
+
+    #[test]
+    fn test_shake256_0_bits_iter() -> Result<()> {
+        let mut hasher = Shake256::new();
+        hasher.finalize()?;
+        let result = hasher.by_ref().take(NUM_BYTES).collect::<Vec<u8>>();
+        assert_eq!(NUM_BYTES, result.len());
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHAKE256_0_BITS, res);
+        let next = hasher.next();
+        assert_eq!(Some(0x5B), next);
+        let next = hasher.next();
+        assert_eq!(Some(0x8D), next);
         Ok(())
     }
 

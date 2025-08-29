@@ -88,6 +88,7 @@ impl Keccak1600Sponge {
 
     fn squeeze_b(&mut self, output: &mut BitVec<u8, Lsb0>, requested_bits: usize) -> Result<()> {
         if self.output.is_empty() {
+            self.keccak()?;
             self.fill_output();
             self.output.reverse();
         }
@@ -147,6 +148,10 @@ impl Sponge for Keccak1600Sponge {
             self.keccak()?;
         }
 
+        if self.output.is_empty() {
+            self.fill_output();
+            self.output.reverse();
+        }
         Ok(())
     }
 

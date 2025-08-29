@@ -20,6 +20,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct Shake128 {
     inner: Shake,
+    finalized: bool,
 }
 
 impl Shake128 {
@@ -27,6 +28,7 @@ impl Shake128 {
     #[must_use]
     pub fn new() -> Self {
         Self {
+            finalized: false,
             inner: Shake {
                 sponge: Keccak1600Sponge::new(SHAKE_128_RATE, SHAKE_128_CAPACITY),
             },
@@ -40,13 +42,32 @@ impl Default for Shake128 {
     }
 }
 
+impl Iterator for Shake128 {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if !self.finalized && self.finalize().is_err() {
+            None
+        } else {
+            let mut byte = [0u8; 1];
+            if self.get_bytes(&mut byte, 1).is_ok() {
+                Some(byte[0])
+            } else {
+                None
+            }
+        }
+    }
+}
+
 impl XofHasher for Shake128 {
     fn update(&mut self, data: &[u8]) {
         self.inner.update(data);
     }
 
     fn finalize(&mut self) -> Result<()> {
-        self.inner.finalize()
+        self.inner.finalize()?;
+        self.finalized = true;
+        Ok(())
     }
 
     fn get_bytes(&mut self, output: &mut [u8], num_bytes: usize) -> Result<()> {
@@ -358,6 +379,21 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
         hasher.get_bytes(&mut result, NUM_BYTES)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
         assert_eq!(SHAKE128_0_BITS, res);
+        Ok(())
+    }
+
+    #[test]
+    fn test_shake128_0_bits_iter() -> Result<()> {
+        let mut hasher = Shake128::new();
+        hasher.finalize()?;
+        let result = hasher.by_ref().take(NUM_BYTES).collect::<Vec<u8>>();
+        assert_eq!(NUM_BYTES, result.len());
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHAKE128_0_BITS, res);
+        let next = hasher.next();
+        assert_eq!(Some(0x4C), next);
+        let next = hasher.next();
+        assert_eq!(Some(0xFF), next);
         Ok(())
     }
 
