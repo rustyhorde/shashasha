@@ -1,7 +1,17 @@
 [package]
-name = "shashasha"
-version = "0.1.0"
+authors = ["Jason Ozias <jason.ozias@kroger.com>"]
+categories = ["algorithms", "cryptography"]
+description = "An implementation of SHA3"
+documentation = "http://docs.rs/shashasha"
 edition = "2024"
+homepage = "http://docs.rs/shashasha"
+keywords = ["cryptography", "hash", "sha"]
+license = "MIT OR Apache-2.0"
+name = "shashasha"
+readme = "README.md"
+repository = "https://github.com/rustyhorde/shashasha.git"
+version = "0.1.0"
+rust-version = "1.85.1"
 
 [features]
 unstable = []
