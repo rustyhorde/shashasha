@@ -189,3 +189,15 @@ fn zero_pad(bits: &mut BitVec<u8, Lsb0>, capacity_bits: usize) {
     let zero_buffer = vec![0u8; capacity_bits / 8];
     bits.extend_from_raw_slice(&zero_buffer);
 }
+
+#[cfg(test)]
+mod test {
+    use super::Keccak1600Sponge;
+
+    #[test]
+    fn test_keccak1600_default_works() {
+        let sponge = Keccak1600Sponge::default();
+        assert_eq!(sponge.capacity, 0);
+        assert_eq!(sponge.rate, 0);
+    }
+}

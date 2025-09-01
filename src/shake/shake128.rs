@@ -97,6 +97,38 @@ mod test {
 
     const NUM_BITS: usize = 4096;
     const NUM_BYTES: usize = NUM_BITS / 8;
+    const SHAKE128_HELLO_WORLD: &str = "B5 FF D1 13 FA 12 7F 4D 9C 7E 48 3C B5 22 64 ED \
+41 35 54 EF 89 9C 0C F7 C1 D7 36 DD B9 33 13 A6 \
+E7 6A 35 E2 4C 33 88 2D 9E 7C 3E C4 A9 E0 FF 5F \
+C5 53 84 DA 25 ED E6 4C 4B 72 10 40 FD 87 39 35 \
+28 B7 65 E2 29 A3 BB AC 54 C3 84 5C F4 91 F8 D4 \
+1A D8 A2 EC C6 6D 48 A4 52 12 10 9F C7 8F 65 FE \
+E5 A9 28 8C 5C C4 8A 86 5E FE 9F E7 28 05 03 B3 \
+C1 96 48 86 BA 4A A1 B2 BB B1 61 F1 82 7D D9 B5 \
+19 AB B2 AA 60 88 14 40 52 55 91 F3 40 75 2D 78 \
+09 F3 9E 34 CB E5 B9 7D F4 6B 80 6E D7 EA 3A 64 \
+7C 2B 52 D5 91 C2 AF E4 E6 B0 68 60 29 04 94 92 \
+87 60 59 FC 2D 68 2F AB 82 75 7E 7F EF 41 0A 2C \
+57 F1 DC 69 29 FB C8 54 9D 0A 22 09 DD 40 90 95 \
+3A 98 3A 7D 08 65 40 59 CB 10 4B 23 D3 7F 7D 55 \
+6A 94 AD 5F 55 4A 2E F2 12 4F 56 8B E1 1A CF 3A \
+1B 53 75 81 8B 63 A6 10 84 B9 A5 9C 41 EA D2 C5 \
+9F 72 7F 7B 9E 04 7B 09 97 95 4E 6A 42 B8 BC A2 \
+C2 A4 3E 10 33 F5 EC 8D 37 CF 74 86 FF 45 6F BF \
+64 E0 E1 FE DC AF 30 3A 31 40 14 4F 21 31 63 A0 \
+D5 24 8B AD C0 31 88 2A 37 1E 0C 70 AE F7 10 A2 \
+DF 27 75 3B CA F4 B5 A0 B7 4C 61 73 43 E9 AF 54 \
+93 7C E6 79 F2 9D 18 8E 6F 71 8B AF 61 4C E5 77 \
+72 E1 87 0F CA F1 41 22 A1 CB AA 18 CB A9 DB DA \
+EC ED 84 13 BF 25 48 6E 4E 53 67 24 B9 D0 43 73 \
+5B C7 8D 45 42 DD 2C 6B 6C 14 5F 9B B8 2E C1 33 \
+CC 22 80 06 EB 92 BE E9 7A 7C 20 F9 CF 8C BD E6 \
+F4 40 0D 50 F5 7A E1 EC E0 40 D9 F2 BC DD A2 1C \
+2E 10 50 1C 37 16 82 35 A5 36 87 57 1E 7A 2C D1 \
+3E EF 3C 84 28 7D 0C 1C 18 24 76 72 36 0D D9 8D \
+9C 7C 57 38 E2 90 55 38 F3 84 66 10 1F DF 6E 03 \
+86 30 45 E9 20 5D 12 1C B7 47 73 E1 59 26 48 51 \
+3A 14 1A 25 04 64 26 3B 6C B8 43 22 7C AB DC 8D";
     const SHAKE128_0_BITS: &str = "7F 9C 2B A4 E8 8F 82 7D 61 60 45 50 76 05 85 3E \
 D7 3B 80 93 F6 EF BC 88 EB 1A 6E AC FA 66 EF 26 \
 3C B1 EE A9 88 00 4B 93 10 3C FB 0A EE FD 2A 68 \
@@ -394,6 +426,21 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
         assert_eq!(Some(0x4C), next);
         let next = hasher.next();
         assert_eq!(Some(0xFF), next);
+        Ok(())
+    }
+
+    #[test]
+    fn test_shake128_0_bits_iter_auto_finalize() -> Result<()> {
+        let mut hasher = Shake128::default();
+        hasher.update(b"Hello, world!");
+        let result = hasher.by_ref().take(NUM_BYTES).collect::<Vec<u8>>();
+        assert_eq!(NUM_BYTES, result.len());
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHAKE128_HELLO_WORLD, res);
+        let next = hasher.next();
+        assert_eq!(Some(0xF0), next);
+        let next = hasher.next();
+        assert_eq!(Some(0xCA), next);
         Ok(())
     }
 

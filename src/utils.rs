@@ -49,3 +49,44 @@ pub fn b2h(bits: &BitVec<u8, Lsb0>, include_space: bool, upper: bool) -> Result<
     }
     Ok(res.trim_end().to_string())
 }
+
+#[cfg(test)]
+mod test {
+    use super::b2h;
+
+    use anyhow::Result;
+
+    use crate::{Lsb0, bitvec};
+
+    #[test]
+    fn test_b2h_incude_space_upper() -> Result<()> {
+        let bits = bitvec![u8, Lsb0; 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0];
+        let hex = b2h(&bits, true, true)?;
+        assert_eq!(hex, "AA 55");
+        Ok(())
+    }
+
+    #[test]
+    fn test_b2h_no_space_upper() -> Result<()> {
+        let bits = bitvec![u8, Lsb0; 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0];
+        let hex = b2h(&bits, false, true)?;
+        assert_eq!(hex, "AA55");
+        Ok(())
+    }
+
+    #[test]
+    fn test_b2h_incude_space_lower() -> Result<()> {
+        let bits = bitvec![u8, Lsb0; 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0];
+        let hex = b2h(&bits, true, false)?;
+        assert_eq!(hex, "aa 55");
+        Ok(())
+    }
+
+    #[test]
+    fn test_b2h_no_space_lower() -> Result<()> {
+        let bits = bitvec![u8, Lsb0; 0, 1, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0];
+        let hex = b2h(&bits, false, false)?;
+        assert_eq!(hex, "aa55");
+        Ok(())
+    }
+}

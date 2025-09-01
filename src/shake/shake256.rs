@@ -97,6 +97,38 @@ mod test {
 
     const NUM_BITS: usize = 4096;
     const NUM_BYTES: usize = NUM_BITS / 8;
+    const SHAKE256_HELLO_WORLD: &str = "CF 68 A0 D3 88 04 7E D5 88 AD 72 D3 80 8C F9 A3 \
+24 3F 04 D4 90 17 48 C7 05 FB F3 A2 7D 95 55 42 \
+FD 9D 53 AF 53 E8 4C 8A BD 4F CE 6E 22 4A F9 A0 \
+A9 E7 EE A5 57 3A 88 6B 1A F8 C2 9F 98 97 C8 B5 \
+9E FE 1B 36 CA 40 2E EC 69 39 37 0D D8 94 59 63 \
+D6 C8 17 15 72 9E 6B 5C 93 7A F4 A8 D4 01 A0 7D \
+DE 58 0D F9 C3 B2 FB 1A DB 41 BC 84 F6 8A 8D 75 \
+F1 D1 23 E8 B7 CB 31 DF 2D 10 67 7F 30 7D BB 83 \
+60 ED E7 27 74 42 9B 7C 58 54 0F 2E 1F 97 05 A0 \
+F7 87 2D 4E AD 01 8E 2C 10 7C D2 1C A9 A2 AA 39 \
+F5 69 74 A7 F0 1E DE 28 57 2F F0 1E AA EB F5 B4 \
+02 32 01 1E E6 C0 0C C5 58 40 78 60 14 15 D4 50 \
+0F 49 98 64 4B 9C 35 E9 A6 04 CA 86 51 E7 A0 68 \
+65 69 8C B4 54 1C 89 C8 5C E4 DE 32 6B 40 23 01 \
+84 F0 28 16 01 7B 5E DA 27 C2 2E 42 F3 69 15 8C \
+26 3E 7D E4 5C CB 89 F8 75 00 6B 2C 25 37 B4 C9 \
+D8 9D 4B B9 D1 F6 4F 11 B9 25 E5 41 43 D3 C6 6E \
+33 BC 2C EF B8 90 62 8A C5 F0 1C B5 6E 85 69 D9 \
+76 DB 9B 95 1D 80 61 F6 8D C6 7F BE 5A AC B8 69 \
+30 8C 5E 05 D1 4C 11 20 D7 11 5E EE 08 27 0D 8A \
+94 B8 01 79 22 6E 7B 50 55 5F C0 C2 D4 41 2D A5 \
+2F 9D 56 A7 4C 48 F3 C2 27 51 DB 3F 46 CA 56 16 \
+53 19 20 1C 69 D7 67 9B 52 E5 0C 14 BD F5 D7 80 \
+45 15 77 0A 8B FB AF 8F AD 9D 21 FD 8D C7 A8 44 \
+31 1A B2 26 77 AB 8F 94 91 7D 19 32 CE 83 DD 42 \
+A2 9A A9 EB 96 72 FD B0 CF 05 B6 AE FE 0A A1 4E \
+E7 0A D5 F1 26 2B 8F 4B D9 12 B0 0C D7 3F 36 25 \
+2A E1 90 D0 FB 94 B8 57 11 D8 01 5E F5 27 80 F9 \
+79 77 8F A5 3F BB 4D 00 03 BF 7E 1F E1 2A 0D 8A \
+68 A5 63 BB D9 BD 04 54 E9 64 C5 58 97 E5 29 CA \
+1B 48 7D 19 78 F3 EF D5 19 62 8B 8F D8 87 9A 93 \
+39 EE BD 5B 88 B4 CD F9 C6 8A E9 39 62 E0 26 FF";
     const SHAKE256_0_BITS: &str = "46 B9 DD 2B 0B A8 8D 13 23 3B 3F EB 74 3E EB 24 \
 3F CD 52 EA 62 B8 1B 82 B5 0C 27 64 6E D5 76 2F \
 D7 5D C4 DD D8 C0 F2 00 CB 05 01 9D 67 B5 92 F6 \
@@ -318,6 +350,21 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
     }
 
     #[test]
+    fn test_shake128_0_bits_iter_auto_finalize() -> Result<()> {
+        let mut hasher = Shake256::default();
+        hasher.update(b"Hello, world!");
+        let result = hasher.by_ref().take(NUM_BYTES).collect::<Vec<u8>>();
+        assert_eq!(NUM_BYTES, result.len());
+        let res = b2h(&BitVec::from_slice(&result), true, true)?;
+        assert_eq!(SHAKE256_HELLO_WORLD, res);
+        let next = hasher.next();
+        assert_eq!(Some(0xA4), next);
+        let next = hasher.next();
+        assert_eq!(Some(0xA3), next);
+        Ok(())
+    }
+
+    #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg5.pdf>
     fn test_shake256_5_bits() -> Result<()> {
         let mut hasher = Shake256::new();
@@ -388,6 +435,30 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         hasher.get_bytes(&mut result, NUM_BYTES)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
         assert_eq!(SHAKE256_1630_BITS, res);
+        Ok(())
+    }
+
+    #[test]
+    fn test_shake256_get_bits() -> Result<()> {
+        let mut hasher = Shake256::new();
+        let mut result = BitVec::<u8, Lsb0>::with_capacity(32);
+        hasher.finalize()?;
+        hasher.get_bits(&mut result, 8)?;
+        assert_eq!(8, result.len());
+        let res = b2h(&result, false, false)?;
+        assert_eq!("46", res);
+        hasher.get_bits(&mut result, 16)?;
+        assert_eq!(24, result.len());
+        let res = b2h(&result, false, false)?;
+        assert_eq!("46b9dd", res);
+        hasher.get_bits(&mut result, 3)?;
+        assert_eq!(27, result.len());
+        let res = b2h(&result, false, false)?;
+        assert_eq!("46b9dd03", res);
+        hasher.get_bits(&mut result, 5)?;
+        assert_eq!(32, result.len());
+        let res = b2h(&result, false, false)?;
+        assert_eq!("46b9dd2b", res);
         Ok(())
     }
 }

@@ -86,9 +86,24 @@ mod test {
     }
 
     #[test]
+    fn test_sha3_512_update() -> Result<()> {
+        let mut hasher = Sha3_512::new();
+        let mut result = [0u8; SHA3_512_BYTES];
+        hasher.update(b"Hello, world!");
+        hasher.finalize(&mut result)?;
+        assert_eq!(result.len(), SHA3_512_BYTES);
+        let res = b2h(&BitVec::<u8, Lsb0>::from_slice(&result), false, false)?;
+        assert_eq!(
+            "8e47f1185ffd014d238fabd02a1a32defe698cbf38c037a90e3c0a0a32370fb52cbd641250508502295fcabcbf676c09470b27443868c8e5f70e26dc337288af",
+            res
+        );
+        Ok(())
+    }
+
+    #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA3-512_Msg5.pdf>
     fn test_sha3_512_5_bits() -> Result<()> {
-        let mut hasher = Sha3_512::new();
+        let mut hasher = Sha3_512::default();
         hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1]);
         let mut result = [0u8; SHA3_512_BYTES];
         hasher.finalize(&mut result)?;

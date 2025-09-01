@@ -86,9 +86,24 @@ mod test {
     }
 
     #[test]
+    fn test_sha3_384_update() -> Result<()> {
+        let mut hasher = Sha3_384::new();
+        let mut result = [0u8; SHA3_384_BYTES];
+        hasher.update(b"Hello, world!");
+        hasher.finalize(&mut result)?;
+        assert_eq!(result.len(), SHA3_384_BYTES);
+        let res = b2h(&BitVec::<u8, Lsb0>::from_slice(&result), false, false)?;
+        assert_eq!(
+            "6ba9ea268965916f5937228dde678c202f9fe756a87d8b1b7362869583a45901fd1a27289d72fc0e3ff48b1b78827d3a",
+            res
+        );
+        Ok(())
+    }
+
+    #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA3-384_Msg5.pdf>
     fn test_sha3_384_5_bits() -> Result<()> {
-        let mut hasher = Sha3_384::new();
+        let mut hasher = Sha3_384::default();
         hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1]);
         let mut result = [0u8; SHA3_384_BYTES];
         hasher.finalize(&mut result)?;

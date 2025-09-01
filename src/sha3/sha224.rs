@@ -96,7 +96,7 @@ mod test {
     #[test]
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA3-224_Msg5.pdf>
     fn test_sha3_224_5_bits() -> Result<()> {
-        let mut hasher = Sha3_224::new();
+        let mut hasher = Sha3_224::default();
         hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1]);
         let mut result = [0u8; SHA3_224_BYTES];
         hasher.finalize(&mut result)?;
