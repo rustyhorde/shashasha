@@ -60,8 +60,8 @@
 //! hasher.finalize()?;
 //! let result = hasher.by_ref().take(4).collect::<Vec<u8>>();
 //! assert_eq!(4, result.len());
-//! let res = b2h(&BitVec::from_slice(&result), true, true)?;
-//! assert_eq!("6F 18 28 7D", res);
+//! let res = b2h(&BitVec::from_slice(&result), false, false)?;
+//! assert_eq!("6f18287d", res);
 //! let next = hasher.next();
 //! assert_eq!(Some(0x53), next);
 //! let next = hasher.next();
