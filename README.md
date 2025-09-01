@@ -2,6 +2,19 @@
 
 <https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf>
 
+## Current Release
+[![docs.rs](https://docs.rs/shashasha/badge.svg)](https://docs.rs/shashasha)
+[![Crates.io](https://img.shields.io/crates/v/shashasha.svg)](https://crates.io/crates/shashasha)
+[![Crates.io](https://img.shields.io/crates/l/shashasha.svg)](https://crates.io/crates/shashasha)
+[![Crates.io](https://img.shields.io/crates/d/shashasha.svg)](https://crates.io/crates/shashasha)
+[![codecov](https://codecov.io/gh/rustyhorde/shashasha/branch/master/graph/badge.svg?token=cBXro7o2UN)](https://codecov.io/gh/rustyhorde/shashasha)
+[![CI](https://github.com/rustyhorde/shashasha/actions/workflows/shashasha.yml/badge.svg)](https://github.com/rustyhorde/shashasha/actions)
+[![sponsor](https://img.shields.io/github/sponsors/crazysacx?logo=github-sponsors)](https://github.com/sponsors/CraZySacX)
+
+## MSRV
+The current minimum supported rust version is 1.85.1
+
+## Examples
 ```rust
 use anyhow::Result;
 use shashasha::{b2h, bits, BitVec, Hasher, HasherBits, Lsb0, Sha3_224, SHA3_224_BYTES, Shake128, Shake256, XofHasher, XofHasherBits};
