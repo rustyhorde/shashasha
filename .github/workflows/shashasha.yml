@@ -157,21 +157,3 @@ jobs:
       html: true
       run_cmd: ${{ vars.COVERAGE_RUN_CMD }}
     secrets: inherit
-
-  call-shashasha-lib:
-    name: shashasha-lib
-    needs: [coverage-linux, coverage-macos, coverage-windows]
-    uses: ./.github/workflows/shashasha_lib.yml
-    secrets: inherit
-
-  call-shashasha-gix:
-    name: shashasha-gix
-    needs: [call-shashasha-lib]
-    uses: ./.github/workflows/shashasha_gix.yml
-    secrets: inherit
-  
-  call-shashasha-pretty:
-    name: shashasha-pretty
-    needs: [call-shashasha-gix]
-    uses: ./.github/workflows/shashasha_pretty.yml
-    secrets: inherit
