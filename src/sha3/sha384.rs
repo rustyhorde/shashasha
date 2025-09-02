@@ -35,14 +35,15 @@ impl Sha3_384 {
         Self {
             inner: Sha3::<{ SHA3_384_BYTES }> {
                 sponge: Keccak1600Sponge::new(SHA3_384_RATE, SHA3_384_CAPACITY),
+                finalized: false,
             },
         }
     }
 }
 
 impl Hasher<{ SHA3_384_BYTES }> for Sha3_384 {
-    fn update(&mut self, data: &[u8]) {
-        self.inner.update(data);
+    fn update(&mut self, data: &[u8]) -> Result<()> {
+        self.inner.update(data)
     }
 
     fn finalize(&mut self, output: &mut [u8; SHA3_384_BYTES]) -> Result<()> {
@@ -51,8 +52,8 @@ impl Hasher<{ SHA3_384_BYTES }> for Sha3_384 {
 }
 
 impl HasherBits<{ SHA3_384_BYTES }> for Sha3_384 {
-    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
-        self.inner.update_bits(data);
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) -> Result<()> {
+        self.inner.update_bits(data)
     }
 }
 
@@ -89,7 +90,7 @@ mod test {
     fn test_sha3_384_update() -> Result<()> {
         let mut hasher = Sha3_384::new();
         let mut result = [0u8; SHA3_384_BYTES];
-        hasher.update(b"Hello, world!");
+        hasher.update(b"Hello, world!")?;
         hasher.finalize(&mut result)?;
         assert_eq!(result.len(), SHA3_384_BYTES);
         let res = b2h(&BitVec::<u8, Lsb0>::from_slice(&result), false, false)?;
@@ -104,7 +105,7 @@ mod test {
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA3-384_Msg5.pdf>
     fn test_sha3_384_5_bits() -> Result<()> {
         let mut hasher = Sha3_384::default();
-        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1]);
+        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1])?;
         let mut result = [0u8; SHA3_384_BYTES];
         hasher.finalize(&mut result)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
@@ -116,7 +117,7 @@ mod test {
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA3-384_Msg30.pdf>
     fn test_sha3_384_30_bits() -> Result<()> {
         let mut hasher = Sha3_384::new();
-        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0]);
+        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0])?;
         let mut result = [0u8; SHA3_384_BYTES];
         hasher.finalize(&mut result)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
@@ -131,7 +132,7 @@ mod test {
         let bit_vec = create_test_vector(Mode::Sha3_1600);
         assert_eq!(1600, bit_vec.len());
         let mut hasher = Sha3_384::new();
-        hasher.update_bits(bit_vec.as_bitslice());
+        hasher.update_bits(bit_vec.as_bitslice())?;
         let mut result = [0u8; SHA3_384_BYTES];
         hasher.finalize(&mut result)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
@@ -146,7 +147,7 @@ mod test {
         let bit_vec = create_test_vector(Mode::Sha3_1605);
         assert_eq!(1605, bit_vec.len());
         let mut hasher = Sha3_384::new();
-        hasher.update_bits(bit_vec.as_bitslice());
+        hasher.update_bits(bit_vec.as_bitslice())?;
         let mut result = [0u8; SHA3_384_BYTES];
         hasher.finalize(&mut result)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
@@ -161,11 +162,29 @@ mod test {
         let bit_vec = create_test_vector(Mode::Sha3_1630);
         assert_eq!(1630, bit_vec.len());
         let mut hasher = Sha3_384::new();
-        hasher.update_bits(bit_vec.as_bitslice());
+        hasher.update_bits(bit_vec.as_bitslice())?;
         let mut result = [0u8; SHA3_384_BYTES];
         hasher.finalize(&mut result)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
         assert_eq!(SHA3_384_1630_BITS, res);
+        Ok(())
+    }
+
+    #[test]
+    fn test_sha3_384_update_after_finalize_error() -> Result<()> {
+        let mut hasher = Sha3_384::new();
+        hasher.update(b"Yoda!")?;
+        hasher.finalize(&mut [0u8; SHA3_384_BYTES])?;
+        assert!(hasher.update(b"Hello, world!").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_sha3_384_finalize_after_finalize_error() -> Result<()> {
+        let mut hasher = Sha3_384::new();
+        hasher.update(b"Yoda!")?;
+        hasher.finalize(&mut [0u8; SHA3_384_BYTES])?;
+        assert!(hasher.finalize(&mut [0u8; SHA3_384_BYTES]).is_err());
         Ok(())
     }
 }

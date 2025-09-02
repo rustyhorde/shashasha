@@ -20,4 +20,7 @@ pub enum Sha3Error {
     /// Thrown if the number of bits does not match the output length given to the squeezed function
     #[error("Output length does not match number of bits")]
     OutputLengthMismatch(usize, usize),
+    /// Thrown if an update is requested after finalize has been called.
+    #[error("Hasher has been finalized; no further updates allowed")]
+    Finalized,
 }

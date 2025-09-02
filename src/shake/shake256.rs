@@ -60,8 +60,8 @@ impl Iterator for Shake256 {
 }
 
 impl XofHasher for Shake256 {
-    fn update(&mut self, data: &[u8]) {
-        self.inner.update(data);
+    fn update(&mut self, data: &[u8]) -> Result<()> {
+        self.inner.update(data)
     }
 
     fn finalize(&mut self) -> Result<()> {
@@ -76,8 +76,8 @@ impl XofHasher for Shake256 {
 }
 
 impl XofHasherBits for Shake256 {
-    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
-        self.inner.update_bits(data);
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) -> Result<()> {
+        self.inner.update_bits(data)
     }
 
     fn get_bits(&mut self, output: &mut BitVec<u8, Lsb0>, num_bits: usize) -> Result<()> {
@@ -352,7 +352,7 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
     #[test]
     fn test_shake128_0_bits_iter_auto_finalize() -> Result<()> {
         let mut hasher = Shake256::default();
-        hasher.update(b"Hello, world!");
+        hasher.update(b"Hello, world!")?;
         let result = hasher.by_ref().take(NUM_BYTES).collect::<Vec<u8>>();
         assert_eq!(NUM_BYTES, result.len());
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
@@ -368,7 +368,7 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg5.pdf>
     fn test_shake256_5_bits() -> Result<()> {
         let mut hasher = Shake256::new();
-        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1]);
+        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1])?;
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
@@ -381,7 +381,7 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE256_Msg30.pdf>
     fn test_shake256_30_bits() -> Result<()> {
         let mut hasher = Shake256::new();
-        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0]);
+        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0])?;
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
@@ -397,7 +397,7 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let bit_vec = create_test_vector(Mode::Sha3_1600);
         assert_eq!(1600, bit_vec.len());
         let mut hasher = Shake256::new();
-        hasher.update_bits(bit_vec.as_bitslice());
+        hasher.update_bits(bit_vec.as_bitslice())?;
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
@@ -413,7 +413,7 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let bit_vec = create_test_vector(Mode::Sha3_1605);
         assert_eq!(1605, bit_vec.len());
         let mut hasher = Shake256::new();
-        hasher.update_bits(bit_vec.as_bitslice());
+        hasher.update_bits(bit_vec.as_bitslice())?;
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
@@ -429,7 +429,7 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         let bit_vec = create_test_vector(Mode::Sha3_1630);
         assert_eq!(1630, bit_vec.len());
         let mut hasher = Shake256::new();
-        hasher.update_bits(bit_vec.as_bitslice());
+        hasher.update_bits(bit_vec.as_bitslice())?;
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
@@ -459,6 +459,24 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         assert_eq!(32, result.len());
         let res = b2h(&result, false, false)?;
         assert_eq!("46b9dd2b", res);
+        Ok(())
+    }
+
+    #[test]
+    fn test_shake256_update_after_finalize_error() -> Result<()> {
+        let mut hasher = Shake256::new();
+        hasher.update(b"Yoda!")?;
+        hasher.finalize()?;
+        assert!(hasher.update(b"Hello, world!").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_shake256_finalize_after_finalize_error() -> Result<()> {
+        let mut hasher = Shake256::new();
+        hasher.update(b"Yoda!")?;
+        hasher.finalize()?;
+        assert!(hasher.finalize().is_err());
         Ok(())
     }
 }

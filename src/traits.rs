@@ -12,7 +12,11 @@ use bitvec::{order::Lsb0, slice::BitSlice, vec::BitVec};
 /// Trait for hashing data with a fixed output size and byte input.
 pub trait Hasher<const D_BYTES: usize> {
     /// Update the hasher with new byte data.
-    fn update(&mut self, data: &[u8]);
+    ///
+    /// # Errors
+    /// An error will be returned if `update` is called after the hasher has been finalized.
+    ///
+    fn update(&mut self, data: &[u8]) -> Result<()>;
     /// Finalize the hash computation and return the result.
     ///
     /// # Errors
@@ -23,13 +27,21 @@ pub trait Hasher<const D_BYTES: usize> {
 /// Trait for hashing data with a fixed output size and `BitSlice` input.
 pub trait HasherBits<const D_BYTES: usize> {
     /// Update the hasher with new bits
-    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>);
+    ///
+    /// # Errors
+    /// An error will be returned if `update_bits` is called after the hasher has been finalized.
+    ///
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) -> Result<()>;
 }
 
 /// Trait for hashing data with an arbitrary output size and byte input data.
 pub trait XofHasher {
     /// Update the hasher with new byte data.
-    fn update(&mut self, data: &[u8]);
+    ///
+    /// # Errors
+    /// An error will be returned if `update` is called after the hasher has been finalized.
+    ///
+    fn update(&mut self, data: &[u8]) -> Result<()>;
     /// Finalize the absorbing phase.
     ///
     /// # Errors
@@ -45,7 +57,11 @@ pub trait XofHasher {
 /// Trait for hashing data with an arbitrary output size and `BitSlice` input data.
 pub trait XofHasherBits {
     /// Update the hasher with new bits
-    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>);
+    ///
+    /// # Errors
+    /// An error will be returned if `update_bits` is called after the hasher has been finalized.
+    ///
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) -> Result<()>;
     /// Start the squeezing phase and fill the requested number of bits.
     ///
     /// # Errors
@@ -56,10 +72,18 @@ pub trait XofHasherBits {
 /// A sponge trait for absorbing and squeezing data (Keccak for example)
 pub(crate) trait Sponge {
     /// Update the sponge with the given data.
-    fn update(&mut self, data: &[u8]);
+    ///
+    /// # Errors
+    /// An error will be returned if `update` is called after the hasher has been finalized.
+    ///
+    fn update(&mut self, data: &[u8]) -> Result<()>;
 
     /// Update the sponge with the given bits.
-    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>);
+    ///
+    /// # Errors
+    /// An error will be returned if `update_bits` is called after the hasher has been finalized.
+    ///
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) -> Result<()>;
 
     /// Absorb the sponge data.
     ///

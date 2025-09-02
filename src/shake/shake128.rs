@@ -20,7 +20,6 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct Shake128 {
     inner: Shake,
-    finalized: bool,
 }
 
 impl Shake128 {
@@ -28,7 +27,6 @@ impl Shake128 {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            finalized: false,
             inner: Shake {
                 sponge: Keccak1600Sponge::new(SHAKE_128_RATE, SHAKE_128_CAPACITY),
             },
@@ -46,7 +44,7 @@ impl Iterator for Shake128 {
     type Item = u8;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if !self.finalized && self.finalize().is_err() {
+        if !self.inner.finalized() && self.finalize().is_err() {
             None
         } else {
             let mut byte = [0u8; 1];
@@ -60,14 +58,12 @@ impl Iterator for Shake128 {
 }
 
 impl XofHasher for Shake128 {
-    fn update(&mut self, data: &[u8]) {
-        self.inner.update(data);
+    fn update(&mut self, data: &[u8]) -> Result<()> {
+        self.inner.update(data)
     }
 
     fn finalize(&mut self) -> Result<()> {
-        self.inner.finalize()?;
-        self.finalized = true;
-        Ok(())
+        self.inner.finalize()
     }
 
     fn get_bytes(&mut self, output: &mut [u8], num_bytes: usize) -> Result<()> {
@@ -76,8 +72,8 @@ impl XofHasher for Shake128 {
 }
 
 impl XofHasherBits for Shake128 {
-    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
-        self.inner.update_bits(data);
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) -> Result<()> {
+        self.inner.update_bits(data)
     }
 
     fn get_bits(&mut self, output: &mut BitVec<u8, Lsb0>, num_bits: usize) -> Result<()> {
@@ -432,7 +428,7 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
     #[test]
     fn test_shake128_0_bits_iter_auto_finalize() -> Result<()> {
         let mut hasher = Shake128::default();
-        hasher.update(b"Hello, world!");
+        hasher.update(b"Hello, world!")?;
         let result = hasher.by_ref().take(NUM_BYTES).collect::<Vec<u8>>();
         assert_eq!(NUM_BYTES, result.len());
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
@@ -491,7 +487,7 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE128_Msg5.pdf>
     fn test_shake128_5_bits() -> Result<()> {
         let mut hasher = Shake128::new();
-        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1]);
+        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1])?;
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
@@ -504,7 +500,7 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHAKE128_Msg30.pdf>
     fn test_shake128_30_bits() -> Result<()> {
         let mut hasher = Shake128::new();
-        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0]);
+        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0])?;
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
@@ -520,7 +516,7 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
         let bit_vec = create_test_vector(Mode::Sha3_1600);
         assert_eq!(1600, bit_vec.len());
         let mut hasher = Shake128::new();
-        hasher.update_bits(bit_vec.as_bitslice());
+        hasher.update_bits(bit_vec.as_bitslice())?;
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
@@ -536,7 +532,7 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
         let bit_vec = create_test_vector(Mode::Sha3_1605);
         assert_eq!(1605, bit_vec.len());
         let mut hasher = Shake128::new();
-        hasher.update_bits(bit_vec.as_bitslice());
+        hasher.update_bits(bit_vec.as_bitslice())?;
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
@@ -552,12 +548,30 @@ B0 26 CE DD 57 59 5B 1A B6 FE 88 A7 84 BE 0C 06";
         let bit_vec = create_test_vector(Mode::Sha3_1630);
         assert_eq!(1630, bit_vec.len());
         let mut hasher = Shake128::new();
-        hasher.update_bits(bit_vec.as_bitslice());
+        hasher.update_bits(bit_vec.as_bitslice())?;
         let mut result = [0u8; NUM_BYTES];
         hasher.finalize()?;
         hasher.get_bytes(&mut result, NUM_BYTES)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
         assert_eq!(SHAKE128_1630_BITS, res);
+        Ok(())
+    }
+
+    #[test]
+    fn test_shake128_update_after_finalize_error() -> Result<()> {
+        let mut hasher = Shake128::new();
+        hasher.update(b"Yoda!")?;
+        hasher.finalize()?;
+        assert!(hasher.update(b"Hello, world!").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_shake128_finalize_after_finalize_error() -> Result<()> {
+        let mut hasher = Shake128::new();
+        hasher.update(b"Yoda!")?;
+        hasher.finalize()?;
+        assert!(hasher.finalize().is_err());
         Ok(())
     }
 }

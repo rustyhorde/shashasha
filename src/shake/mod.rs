@@ -9,7 +9,7 @@
 use anyhow::Result;
 use bitvec::{bits, order::Lsb0, slice::BitSlice, vec::BitVec};
 
-use crate::{sponge::Keccak1600Sponge, traits::Sponge};
+use crate::{Sha3Error, sponge::Keccak1600Sponge, traits::Sponge};
 
 pub(crate) mod shake128;
 pub(crate) mod shake256;
@@ -21,22 +21,30 @@ struct Shake {
 }
 
 impl Shake {
-    pub(crate) fn update(&mut self, data: &[u8]) {
-        // Update the internal state with the new data
-        self.sponge.update(data);
+    pub(crate) fn finalized(&self) -> bool {
+        self.sponge.finalized()
     }
 
-    pub(crate) fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
+    pub(crate) fn update(&mut self, data: &[u8]) -> Result<()> {
+        // Update the internal state with the new data
+        self.sponge.update(data)
+    }
+
+    pub(crate) fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) -> Result<()> {
         // Update the internal state with the new bits
-        self.sponge.update_bits(data);
+        self.sponge.update_bits(data)
     }
 
     pub(crate) fn finalize(&mut self) -> Result<()> {
-        // Append the SHAKE domain separation bits (0b1111) to the message
-        self.sponge.update_bits(bits![u8, Lsb0; 1, 1, 1, 1]);
-        // Start the absorbing phase
-        self.sponge.absorb()?;
-        Ok(())
+        if self.sponge.finalized() {
+            Err(Sha3Error::Finalized.into())
+        } else {
+            // Append the SHAKE domain separation bits (0b1111) to the message
+            self.sponge.update_bits(bits![u8, Lsb0; 1, 1, 1, 1])?;
+            // Start the absorbing phase
+            self.sponge.absorb()?;
+            Ok(())
+        }
     }
 
     pub(crate) fn get_bytes(&mut self, output: &mut [u8], num_bytes: usize) -> Result<()> {

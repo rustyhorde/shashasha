@@ -35,14 +35,15 @@ impl Sha3_224 {
         Self {
             inner: Sha3::<{ SHA3_224_BYTES }> {
                 sponge: Keccak1600Sponge::new(SHA3_224_RATE, SHA3_224_CAPACITY),
+                finalized: false,
             },
         }
     }
 }
 
 impl Hasher<{ SHA3_224_BYTES }> for Sha3_224 {
-    fn update(&mut self, data: &[u8]) {
-        self.inner.update(data);
+    fn update(&mut self, data: &[u8]) -> Result<()> {
+        self.inner.update(data)
     }
 
     fn finalize(&mut self, output: &mut [u8; SHA3_224_BYTES]) -> Result<()> {
@@ -51,8 +52,8 @@ impl Hasher<{ SHA3_224_BYTES }> for Sha3_224 {
 }
 
 impl HasherBits<{ SHA3_224_BYTES }> for Sha3_224 {
-    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
-        self.inner.update_bits(data);
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) -> Result<()> {
+        self.inner.update_bits(data)
     }
 }
 
@@ -97,7 +98,7 @@ mod test {
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA3-224_Msg5.pdf>
     fn test_sha3_224_5_bits() -> Result<()> {
         let mut hasher = Sha3_224::default();
-        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1]);
+        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1])?;
         let mut result = [0u8; SHA3_224_BYTES];
         hasher.finalize(&mut result)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
@@ -109,7 +110,7 @@ mod test {
     /// <https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/SHA3-224_Msg30.pdf>
     fn test_sha3_224_30_bits() -> Result<()> {
         let mut hasher = Sha3_224::new();
-        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0]);
+        hasher.update_bits(bits![u8, Lsb0; 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0])?;
         let mut result = [0u8; SHA3_224_BYTES];
         hasher.finalize(&mut result)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
@@ -124,7 +125,7 @@ mod test {
         let bit_vec = create_test_vector(Mode::Sha3_1600);
         assert_eq!(1600, bit_vec.len());
         let mut hasher = Sha3_224::new();
-        hasher.update_bits(bit_vec.as_bitslice());
+        hasher.update_bits(bit_vec.as_bitslice())?;
         let mut result = [0u8; SHA3_224_BYTES];
         hasher.finalize(&mut result)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
@@ -139,7 +140,7 @@ mod test {
         let bit_vec = create_test_vector(Mode::Sha3_1605);
         assert_eq!(1605, bit_vec.len());
         let mut hasher = Sha3_224::new();
-        hasher.update_bits(bit_vec.as_bitslice());
+        hasher.update_bits(bit_vec.as_bitslice())?;
         let mut result = [0u8; SHA3_224_BYTES];
         hasher.finalize(&mut result)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
@@ -154,7 +155,7 @@ mod test {
         let bit_vec = create_test_vector(Mode::Sha3_1630);
         assert_eq!(1630, bit_vec.len());
         let mut hasher = Sha3_224::new();
-        hasher.update_bits(bit_vec.as_bitslice());
+        hasher.update_bits(bit_vec.as_bitslice())?;
         let mut result = [0u8; SHA3_224_BYTES];
         hasher.finalize(&mut result)?;
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
@@ -166,11 +167,29 @@ mod test {
     fn test_sha3_224_byte_data() -> Result<()> {
         let mut hasher = Sha3_224::new();
         let mut result = [0u8; SHA3_224_BYTES];
-        hasher.update(b"Yoda!");
+        hasher.update(b"Yoda!")?;
         hasher.finalize(&mut result)?;
         assert_eq!(result.len(), SHA3_224_BYTES);
         let res = b2h(&BitVec::from_slice(&result), true, true)?;
         assert_eq!(SHA3_224_BYTES_OUT, res);
+        Ok(())
+    }
+
+    #[test]
+    fn test_sha3_224_update_after_finalize_error() -> Result<()> {
+        let mut hasher = Sha3_224::new();
+        hasher.update(b"Yoda!")?;
+        hasher.finalize(&mut [0u8; SHA3_224_BYTES])?;
+        assert!(hasher.update(b"Hello, world!").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_sha_224_finalize_after_finalize_error() -> Result<()> {
+        let mut hasher = Sha3_224::new();
+        hasher.update(b"Yoda!")?;
+        hasher.finalize(&mut [0u8; SHA3_224_BYTES])?;
+        assert!(hasher.finalize(&mut [0u8; SHA3_224_BYTES]).is_err());
         Ok(())
     }
 }
