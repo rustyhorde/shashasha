@@ -20,6 +20,7 @@ pub(crate) struct Keccak1600Sponge {
     rate: usize,
     capacity: usize,
     output: BitVec<u8, Lsb0>,
+    finalized: bool,
 }
 
 impl Default for Keccak1600Sponge {
@@ -38,7 +39,12 @@ impl Keccak1600Sponge {
             output: BitVec::new(),
             rate,
             capacity,
+            finalized: false,
         }
+    }
+
+    pub(crate) fn finalized(&self) -> bool {
+        self.finalized
     }
 
     fn xor_block(&mut self, bits: &BitVec<u8, Lsb0>) -> Result<()> {
@@ -113,14 +119,24 @@ impl Keccak1600Sponge {
 }
 
 impl Sponge for Keccak1600Sponge {
-    fn update(&mut self, data: &[u8]) {
-        // Update the internal state with the new data
-        self.message.extend_from_raw_slice(data);
+    fn update(&mut self, data: &[u8]) -> Result<()> {
+        if self.finalized {
+            Err(Sha3Error::Finalized.into())
+        } else {
+            // Update the internal state with the new data
+            self.message.extend_from_raw_slice(data);
+            Ok(())
+        }
     }
 
-    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) {
-        // Update the internal state with the new bits
-        self.message.extend_from_bitslice(data);
+    fn update_bits(&mut self, data: &BitSlice<u8, Lsb0>) -> Result<()> {
+        if self.finalized {
+            Err(Sha3Error::Finalized.into())
+        } else {
+            // Update the internal state with the new bits
+            self.message.extend_from_bitslice(data);
+            Ok(())
+        }
     }
 
     fn absorb(&mut self) -> Result<()> {
@@ -152,6 +168,7 @@ impl Sponge for Keccak1600Sponge {
             self.fill_output();
             self.output.reverse();
         }
+        self.finalized = true;
         Ok(())
     }
 

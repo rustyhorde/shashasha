@@ -17,7 +17,10 @@ The current minimum supported rust version is 1.85.1
 ## Examples
 ```rust
 use anyhow::Result;
-use shashasha::{b2h, bits, BitVec, Hasher, HasherBits, Lsb0, Sha3_224, SHA3_224_BYTES, Shake128, Shake256, XofHasher, XofHasherBits};
+use shashasha::{
+    BitVec, Hasher, HasherBits, Lsb0, SHA3_224_BYTES, Sha3_224, Shake128, Shake256, XofHasher,
+    XofHasherBits, b2h, bits,
+};
 
 pub fn main() -> Result<()> {
     // Hash some byte data
@@ -72,6 +75,15 @@ pub fn main() -> Result<()> {
     assert_eq!(Some(0x53), next);
     let next = hasher.next();
     assert_eq!(Some(0x75), next);
+
+    // NOTE: Calling update or finalize after any hasher has been finalized
+    // is an error
+    let mut hasher = Sha3_224::new();
+    let mut result = [0u8; SHA3_224_BYTES];
+    hasher.update(b"Yoda!")?;
+    hasher.finalize(&mut result)?;
+    assert!(hasher.update(b"Hello, world!").is_err());
+    assert!(hasher.finalize(&mut result).is_err());
 
     Ok(())
 }
