@@ -176,6 +176,7 @@ mod test {
         hasher.update(b"Yoda!")?;
         hasher.finalize(&mut [0u8; SHA3_256_BYTES])?;
         assert!(hasher.update(b"Hello, world!").is_err());
+        assert!(hasher.update_bits(bits![u8, Lsb0; 1, 0, 1]).is_err());
         Ok(())
     }
 

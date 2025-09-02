@@ -468,6 +468,7 @@ E0 E7 55 37 35 88 02 EF 08 53 B7 47 0B 0F 19 AC";
         hasher.update(b"Yoda!")?;
         hasher.finalize()?;
         assert!(hasher.update(b"Hello, world!").is_err());
+        assert!(hasher.update_bits(bits![u8, Lsb0; 1, 0, 1]).is_err());
         Ok(())
     }
 
