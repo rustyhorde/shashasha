@@ -97,6 +97,8 @@ pub fn f_1600(state: &mut [u64; LANE_COUNT]) -> Result<()> {
     p_1600(state, u64::KECCAK_F_ROUND_COUNT)
 }
 
+#[cfg_attr(feature = "unroll", unroll::unroll_for_loops)]
+#[cfg_attr(feature = "unroll", allow(unused_assignments))]
 fn keccak_p<L: Lane>(state: &mut [L; LANE_COUNT], round_count: usize) -> Result<()> {
     if round_count <= L::KECCAK_F_ROUND_COUNT {
         let round_consts =
