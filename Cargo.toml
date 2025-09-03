@@ -10,16 +10,25 @@ license = "MIT OR Apache-2.0"
 name = "shashasha"
 readme = "README.md"
 repository = "https://github.com/rustyhorde/shashasha.git"
-version = "0.2.0"
+version = "0.3.0"
 rust-version = "1.85.1"
 
 [features]
 unstable = []
+unroll = [ "dep:unroll" ]
 
 [dependencies]
 anyhow = "1.0.99"
 bitvec = "1.0.1"
 thiserror = "2.0.16"
+unroll = { version = "0.1.5", optional = true }
 
 [build-dependencies]
 rustversion = "1.0.22"
+
+[package.metadata.docs.rs]
+features = ["unroll"]
+rustdoc-args = ["--cfg", "docsrs"]
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(coverage,coverage_nightly)'] }
