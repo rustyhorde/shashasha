@@ -20,7 +20,7 @@ unroll = [ "dep:unroll" ]
 [dependencies]
 anyhow = "1.0.100"
 bitvec = "1.0.1"
-thiserror = "2.0.16"
+thiserror = "2.0.17"
 unroll = { version = "0.1.5", optional = true }
 
 [build-dependencies]
