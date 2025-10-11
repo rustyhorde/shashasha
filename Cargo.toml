@@ -10,7 +10,7 @@ license = "MIT OR Apache-2.0"
 name = "shashasha"
 readme = "README.md"
 repository = "https://github.com/rustyhorde/shashasha.git"
-version = "0.3.3"
+version = "0.3.4"
 rust-version = "1.85.1"
 
 [features]
